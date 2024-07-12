@@ -54,8 +54,8 @@ pub fn compress(input_filename: &str, output_filename: &str) -> Result<(), Strin
         None => return Err(format!("Could not create file writer for {}.", output_filename)),
     };
 
-    let padding_size_position = tree_encoding.size();
     file_writer.write_bit_vector(&tree_encoding);
+    let padding_size_position = tree_encoding.size();
 
     // for future padding [0 bits; 7 bits]
     file_writer.write_bit(0);
