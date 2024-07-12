@@ -1,6 +1,6 @@
 pub type Bit = u8;
 
-struct BitVector
+pub struct BitVector
 {
     data: Vec<u8>,
     bits_count: usize,
