@@ -2,6 +2,7 @@ use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap};
 use std::fs::File;
 use crate::file_reader::FileReader;
+use crate::bit_vector::BitVector;
 
 #[derive(Clone, Eq, PartialEq)]
 struct Node
@@ -28,8 +29,8 @@ impl Node
     fn join(self, node2: Node) -> Node
     {
         let mut new_node = Node::new(0, self.frequency + node2.frequency);
-        new_node.left = Some(Box::new(self));
-        new_node.right = Some(Box::new(node2));
+        new_node.left = Some(Box::from(self));
+        new_node.right = Some(Box::from(node2));
 
         new_node
     }
@@ -109,4 +110,39 @@ impl HuffmanTree
             head: Some(head),
         }
     }
+
+    pub fn get_encoding(&self) -> BitVector
+    {
+        let mut encoding = BitVector::new();
+        if let Some(tree_head) = &self.head
+        {
+            self.make_encoding_recursive(tree_head, &mut encoding);
+        }
+
+        encoding
+    }
+
+    fn make_encoding_recursive(&self, node: &Node, encoding: &mut BitVector)
+    {
+        if node.left.is_none()
+        {
+            encoding.push_bit(1);
+            encoding.push_byte(node.data);
+        }
+        else
+        {
+            encoding.push_bit(0);
+
+            if let Some(node) = &node.left
+            {
+                self.make_encoding_recursive(node, encoding);
+            }
+            if let Some(node) = &node.right
+            {
+                self.make_encoding_recursive(node, encoding);
+            }
+        }
+    }
+
+
 }
