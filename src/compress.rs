@@ -1,7 +1,28 @@
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
+use crate::bit_vector::Bit;
 use crate::file_writer::FileWriter;
 use crate::huffman_tree::HuffmanTree;
+
+fn write_bit_to_file(file: &mut File, bit: Bit, bit_position: usize)
+{
+    let byte_position = bit_position / 8;
+    let position_in_bit = bit_position % 8;
+
+    file.seek(SeekFrom::Start(byte_position as u64))
+        .unwrap();
+
+    let mut buffer = [0];
+    file.read(&mut buffer)
+        .unwrap();
+
+    buffer[0] |= bit << (7 - position_in_bit);
+
+    file.seek(SeekFrom::Start(byte_position as u64))
+        .unwrap();
+    file.write(&buffer)
+        .unwrap();
+}
 
 fn write_padding_size(output_filename: &str, padding_size: usize, padding_size_position: usize)
 {
@@ -13,21 +34,9 @@ fn write_padding_size(output_filename: &str, padding_size: usize, padding_size_p
         .open(output_filename)
         .unwrap();
 
-    let byte_position = padding_size_position / 8;
-    let bit_position = padding_size_position % 8;
-
-    file.seek(SeekFrom::Start(byte_position as u64))
-        .unwrap();
-    let mut buffer = [0];
-    file.read(&mut buffer)
-        .unwrap();
-
-    buffer[0] |= (padding_size as u8) << (7 - bit_position);
-
-    file.seek(SeekFrom::Start(byte_position as u64))
-        .unwrap();
-    file.write(&buffer)
-        .unwrap();
+    write_bit_to_file(&mut file, (padding_size >> 2) as Bit, padding_size_position);
+    write_bit_to_file(&mut file, (padding_size >> 1) as Bit, padding_size_position + 1);
+    write_bit_to_file(&mut file, padding_size as Bit, padding_size_position + 2);
 }
 
 pub fn compress(input_filename: &str, output_filename: &str) -> Result<(), String>
@@ -90,11 +99,7 @@ pub fn compress(input_filename: &str, output_filename: &str) -> Result<(), Strin
         file_writer.write_bit_vector(codeword);
     }
 
-    let padding_size = match file_writer.bits_in_buffer_count() % 8
-    {
-        0 => 0,
-        v => 8 - v,
-    };
+    let padding_size = (8 - file_writer.bits_in_buffer_count() % 8) % 8;
 
     file_writer.dump_buffer();
     write_padding_size(output_filename, padding_size, padding_size_position);
