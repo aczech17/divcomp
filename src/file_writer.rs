@@ -60,15 +60,3 @@ impl FileWriter
         self.buffer.size()
     }
 }
-
-//
-// impl Drop for FileWriter
-// {
-//     fn drop(&mut self)
-//     {
-//         todo!();
-//
-//         self.dump_buffer();
-//     }
-// }
-//
