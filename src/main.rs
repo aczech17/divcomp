@@ -8,8 +8,8 @@ mod file_writer;
 
 fn main()
 {
-    let input_filename = "Cargo.toml";
-    let output_filename = "test.test2";
+    let input_filename = "one.txt";
+    let output_filename = "one.bin";
 
     compress(input_filename, output_filename)
         .unwrap();
