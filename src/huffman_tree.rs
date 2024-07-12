@@ -29,8 +29,8 @@ impl Node
     fn join(self, node2: Node) -> Node
     {
         let mut new_node = Node::new(0, self.frequency + node2.frequency);
-        new_node.left = Some(Box::from(self));
-        new_node.right = Some(Box::from(node2));
+        new_node.left = Some(Box::new(self));
+        new_node.right = Some(Box::new(node2));
 
         new_node
     }
@@ -53,35 +53,13 @@ impl Ord for Node
 }
 
 
-struct HuffmanTree
+pub struct HuffmanTree
 {
     head: Option<Node>,
 }
 
 impl HuffmanTree
 {
-    fn get_flat_node_vector(input: File) -> Vec<Node>
-    {
-        let file_reader = FileReader::new(input);
-        let mut frequency_map = HashMap::new();
-
-        for byte in file_reader
-        {
-            match frequency_map.get(&byte)
-            {
-                Some(freq) => frequency_map.insert(byte, freq + 1),
-                None => frequency_map.insert(byte, 1),
-            };
-        }
-
-        let flat_node_vector: Vec<Node> = frequency_map
-            .iter().map(|(&byte, &freq)|
-            Node::new(byte, freq))
-            .collect();
-
-        flat_node_vector
-    }
-
     pub fn new(input: File) -> HuffmanTree
     {
         let node_vector = Self::get_flat_node_vector(input);
@@ -109,6 +87,28 @@ impl HuffmanTree
         {
             head: Some(head),
         }
+    }
+
+    fn get_flat_node_vector(input: File) -> Vec<Node>
+    {
+        let file_reader = FileReader::new(input);
+        let mut frequency_map = HashMap::new();
+
+        for byte in file_reader
+        {
+            match frequency_map.get(&byte)
+            {
+                Some(freq) => frequency_map.insert(byte, freq + 1),
+                None => frequency_map.insert(byte, 1),
+            };
+        }
+
+        let flat_node_vector: Vec<Node> = frequency_map
+            .iter().map(|(&byte, &freq)|
+            Node::new(byte, freq))
+            .collect();
+
+        flat_node_vector
     }
 
     pub fn get_encoding(&self) -> BitVector
@@ -144,5 +144,53 @@ impl HuffmanTree
         }
     }
 
+    pub fn get_bytes_encoding(&self) -> HashMap<u8, BitVector>
+    {
+        let mut map = HashMap::new();
+        let mut code = BitVector::new();
 
+        if let Some(tree_head) = &self.head
+        {
+            if tree_head.left.is_none() // only one node
+            {
+                let mut zero_bit = BitVector::new();
+                zero_bit.push_bit(0);
+
+                map.insert(tree_head.data, zero_bit);
+                return map;
+            }
+
+            self.make_bytes_encoding_recursive(tree_head, &mut code, &mut map);
+        }
+
+        map
+    }
+
+    fn make_bytes_encoding_recursive
+        (&self, node: &Node, code: &mut BitVector, codes: &mut HashMap<u8, BitVector>)
+    {
+        if let Some(left_node) = &node.left
+        {
+            code.push_bit(0);
+            self.make_bytes_encoding_recursive(left_node, code, codes);
+            code.pop_bit();
+        }
+
+        if let Some(right_node) = &node.right
+        {
+            code.push_bit(1);
+            self.make_bytes_encoding_recursive(right_node, code, codes);
+            code.pop_bit();
+        }
+
+        if node.left.is_none() // is a leaf
+        {
+            codes.insert(node.data, code.clone());
+        }
+    }
+
+    pub fn empty(&self) -> bool
+    {
+        self.head.is_none()
+    }
 }
