@@ -17,7 +17,7 @@ impl BitVector
         }
     }
 
-    pub fn push(&mut self, bit: Bit)
+    pub fn push_bit(&mut self, bit: Bit)
     {
         if self.bits_count % 8 == 0
         {
@@ -29,6 +29,15 @@ impl BitVector
 
         self.data[byte_number] |= bit << (7 - bit_number);
         self.bits_count += 1;
+    }
+
+    pub fn push_byte(&mut self, byte: u8)
+    {
+        for bit_number in 0..8
+        {
+            let bit = (byte >> (7 - bit_number)) & 1;
+            self.push_bit(bit);
+        }
     }
 
     pub fn pop(&mut self)
