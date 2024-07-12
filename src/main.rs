@@ -8,7 +8,7 @@ mod file_writer;
 
 fn main()
 {
-    let input_filename = "empty";
+    let input_filename = "Cargo.toml";
     let output_filename = "test.test2";
 
     compress(input_filename, output_filename)
