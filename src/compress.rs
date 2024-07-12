@@ -43,6 +43,8 @@ pub fn compress(input_filename: &str, output_filename: &str) -> Result<(), Strin
     {
         let _empty_file = File::create(output_filename)
             .map_err(|_| format!("Could not create empty file {}.", output_filename))?;
+
+        return Ok(());
     }
 
     let tree_encoding = huffman_tree.get_tree_encoding();
