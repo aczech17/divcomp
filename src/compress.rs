@@ -45,7 +45,7 @@ pub fn compress(input_filename: &str, output_filename: &str) -> Result<(), Strin
             .map_err(|_| format!("Could not create empty file {}.", output_filename))?;
     }
 
-    let tree_encoding = huffman_tree.get_encoding();
+    let tree_encoding = huffman_tree.get_tree_encoding();
     let bytes_encoding = huffman_tree.get_bytes_encoding();
 
     let mut file_writer = match FileWriter::new(output_filename)

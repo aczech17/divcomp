@@ -26,10 +26,10 @@ impl Node
         }
     }
 
-    fn join(self, node2: Node) -> Node
+    fn join(node1: Node, node2: Node) -> Node
     {
-        let mut new_node = Node::new(0, self.frequency + node2.frequency);
-        new_node.left = Some(Box::new(self));
+        let mut new_node = Node::new(0, node1.frequency + node2.frequency);
+        new_node.left = Some(Box::new(node1));
         new_node.right = Some(Box::new(node2));
 
         new_node
@@ -76,7 +76,7 @@ impl HuffmanTree
             let node2 = nodes.pop()
                 .unwrap();
 
-            let joined_node = node1.join(node2);
+            let joined_node = Node::join(node1, node2);
             nodes.push(joined_node);
         }
 
@@ -111,36 +111,30 @@ impl HuffmanTree
         flat_node_vector
     }
 
-    pub fn get_encoding(&self) -> BitVector
+    pub fn get_tree_encoding(&self) -> BitVector
     {
         let mut encoding = BitVector::new();
         if let Some(tree_head) = &self.head
         {
-            self.make_encoding_recursive(tree_head, &mut encoding);
+            self.make_tree_encoding_recursive(tree_head, &mut encoding);
         }
 
         encoding
     }
 
-    fn make_encoding_recursive(&self, node: &Node, encoding: &mut BitVector)
+    fn make_tree_encoding_recursive(&self, node: &Node, encoding: &mut BitVector)
     {
-        if node.left.is_none()
+        if let (Some(left_node), Some(right_node)) =
+            (&node.left, &node.right)
+        {
+            encoding.push_bit(0);
+            self.make_tree_encoding_recursive(left_node, encoding);
+            self.make_tree_encoding_recursive(right_node, encoding);
+        }
+        else // is a leaf
         {
             encoding.push_bit(1);
             encoding.push_byte(node.data);
-        }
-        else
-        {
-            encoding.push_bit(0);
-
-            if let Some(node) = &node.left
-            {
-                self.make_encoding_recursive(node, encoding);
-            }
-            if let Some(node) = &node.right
-            {
-                self.make_encoding_recursive(node, encoding);
-            }
         }
     }
 
@@ -169,21 +163,18 @@ impl HuffmanTree
     fn make_bytes_encoding_recursive
         (&self, node: &Node, code: &mut BitVector, codes: &mut HashMap<u8, BitVector>)
     {
-        if let Some(left_node) = &node.left
+        if let (Some(left_node), Some(right_node)) =
+            (&node.left, &node.right)
         {
             code.push_bit(0);
             self.make_bytes_encoding_recursive(left_node, code, codes);
             code.pop_bit();
-        }
 
-        if let Some(right_node) = &node.right
-        {
             code.push_bit(1);
             self.make_bytes_encoding_recursive(right_node, code, codes);
             code.pop_bit();
         }
-
-        if node.left.is_none() // is a leaf
+        else // is a leaf
         {
             codes.insert(node.data, code.clone());
         }
