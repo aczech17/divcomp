@@ -48,7 +48,7 @@ impl Ord for Node
 {
     fn cmp(&self, other: &Self) -> Ordering
     {
-        other.frequency.cmp(&self.frequency)
+        self.frequency.cmp(&other.frequency)
     }
 }
 
