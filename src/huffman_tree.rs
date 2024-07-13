@@ -48,7 +48,17 @@ impl Ord for Node
 {
     fn cmp(&self, other: &Self) -> Ordering
     {
-        self.frequency.cmp(&other.frequency)
+        if self.frequency.cmp(&other.frequency) == Ordering::Less
+        {
+            return Ordering::Less;
+        }
+
+        if other.frequency.cmp(&self.frequency) == Ordering::Less
+        {
+            return Ordering::Greater;
+        }
+
+        self.data.cmp(&other.data)
     }
 }
 
