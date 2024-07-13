@@ -1,4 +1,5 @@
 use std::env::args;
+use std::fs;
 use std::path::Path;
 use crate::compress::compress;
 
@@ -8,6 +9,8 @@ mod bit_vector;
 mod compress;
 mod file_writer;
 
+extern crate colored;
+use colored::*;
 
 fn parse_arguments() -> Result<(String, String), String>
 {
@@ -57,5 +60,23 @@ fn main()
         Ok(()) => {},
         Err(err_msg) => eprintln!("{}", err_msg),
     };
+
+    let input_file_size = fs::metadata(input_filename).unwrap().len();
+    let output_file_size = fs::metadata(output_filename).unwrap().len();
+
+    let compression_rate = (input_file_size as f64) / (output_file_size as f64);
+
+    println!("Rozmiar pliku wejściowego:\t{input_file_size}B");
+    println!("Rozmiar pliku skompresowanego:\t{output_file_size}B ");
+
+    if compression_rate > 1.0
+    {
+        println!("{}", format!("Współczynnik kompresji:\t\t{compression_rate}").green());
+    }
+    else
+    {
+        println!("{}", format!("Współczynnik kompresji:\t\t{compression_rate}").red());
+    }
 }
+
 
