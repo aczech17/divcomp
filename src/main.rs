@@ -1,7 +1,6 @@
 use std::env::args;
 use std::fs;
 use std::path::Path;
-use crate::compress::compress;
 
 mod huffman_tree;
 mod file_reader;
@@ -11,6 +10,8 @@ mod file_writer;
 
 extern crate colored;
 use colored::*;
+use divcomp::compress::compress;
+use divcomp::decompress::decompress;
 
 fn parse_arguments() -> Result<(String, String), String>
 {
@@ -55,7 +56,7 @@ fn main()
         }
     };
 
-    match compress(&input_filename, &output_filename)
+    match decompress(&input_filename, &output_filename)
     {
         Ok(()) => {},
         Err(err_msg) =>

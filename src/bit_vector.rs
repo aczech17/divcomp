@@ -1,6 +1,6 @@
 pub type Bit = u8;
 
-#[derive(Clone)]
+#[derive(Clone, Eq, PartialEq)]
 pub struct BitVector
 {
     data: Vec<u8>,

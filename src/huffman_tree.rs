@@ -90,6 +90,50 @@ impl HuffmanTree
         }
     }
 
+    pub fn from_code(file_reader: &mut FileReader) -> HuffmanTree
+    {
+        let mut head = Node::new(0, 0);
+        Self::recreate_from_code_recursive(file_reader, &mut head);
+
+        HuffmanTree{head: Some(head)}
+    }
+
+    fn recreate_from_code_recursive(file_reader: &mut FileReader, node: &mut Node)
+    {
+        let bit = file_reader.read_bit()
+            .expect(&format!("{} bits read so far.", file_reader.bits_read()));
+
+        if bit == 0
+        {
+            let left_son = Node::new(0, 0);
+            node.left = Some(Box::new(left_son));
+
+            if let Some(left) = &mut node.left
+            {
+                Self::recreate_from_code_recursive(file_reader, left);
+            }
+
+            let right_son = Node::new(0, 0);
+            node.right = Some(Box::new(right_son));
+
+            if let Some(right) = &mut node.right
+            {
+                Self::recreate_from_code_recursive(file_reader, right);
+            }
+        }
+        else // bit == 1
+        {
+            let mut value = 0;
+            for shift in (0..8).rev()
+            {
+                let next_bit = file_reader.read_bit().unwrap();
+                value |= next_bit << shift;
+            }
+
+            node.data = value;
+        }
+    }
+
     fn get_flat_node_vector(input: File) -> Vec<Node>
     {
         let file_reader = FileReader::new(input);
