@@ -28,6 +28,7 @@ pub fn decompress(input_filename: &str, output_filename: &str) -> Result<(), Str
     if input_file_size == 0
     {
         let _empty_file = File::create(output_filename).map_err(|s| s.to_string())?;
+        return Ok(());
     }
 
     let input_file = match File::open(input_filename)
