@@ -13,18 +13,39 @@ use colored::*;
 use divcomp::compress::compress;
 use divcomp::decompress::decompress;
 
-fn parse_arguments() -> Result<(String, String), String>
+#[derive(Eq, PartialEq)]
+enum Option
 {
-    let usage = "divcomp [input] [output]";
+    Compress, Decompress,
+}
+
+struct Config
+{
+    input_filename: String,
+    output_filename: String,
+    option: Option,
+}
+
+fn parse_arguments() -> Result<Config, String>
+{
+    let usage = "divcomp [-c|-d] [input] [output]";
+
     let args: Vec<String> = args().collect();
 
-    if args.len() < 3
+    if args.len() < 4
     {
         return Err(String::from(usage));
     }
 
-    let input_filename = &args[1];
-    let output_filename = &args[2];
+    let option = match args[1].as_str()
+    {
+        "-c" => Option::Compress,
+        "-d" => Option::Decompress,
+        _ => return Err(usage.to_string()),
+    };
+
+    let input_filename = &args[2];
+    let output_filename = &args[3];
 
     if !Path::new(input_filename).exists()
     {
@@ -41,33 +62,25 @@ fn parse_arguments() -> Result<(String, String), String>
         return Err(format!("{output_filename} already exists."));
     }
 
-    Ok((input_filename.to_string(), output_filename.to_string()))
+    let config = Config
+    {
+        input_filename: input_filename.to_string(),
+        output_filename: output_filename.to_string(),
+        option,
+    };
+
+    Ok(config)
 }
 
-fn main()
+fn print_statistics(config: Config)
 {
-    let (input_filename, output_filename) = match parse_arguments()
+    if config.option == Option::Decompress
     {
-        Ok((i, o)) => (i, o),
-        Err(err_msg) =>
-        {
-            eprintln!("{}", err_msg);
-            return;
-        }
-    };
+        return;
+    }
 
-    match decompress(&input_filename, &output_filename)
-    {
-        Ok(()) => {},
-        Err(err_msg) =>
-        {
-            eprintln!("{}", err_msg);
-            return;
-        }
-    };
-
-    let input_file_size = fs::metadata(input_filename).unwrap().len();
-    let output_file_size = fs::metadata(output_filename).unwrap().len();
+    let input_file_size = fs::metadata(config.input_filename).unwrap().len();
+    let output_file_size = fs::metadata(config.output_filename).unwrap().len();
 
     let compression_rate = (input_file_size as f64) / (output_file_size as f64);
 
@@ -84,4 +97,30 @@ fn main()
     }
 }
 
+fn main()
+{
+    let config = match parse_arguments()
+    {
+        Ok(c) => c,
+        Err(err_msg) =>
+        {
+            eprintln!("{err_msg}");
+            return;
+        }
+    };
+
+    let status = match &config.option
+    {
+        Option::Compress => compress(&config.input_filename, &config.output_filename),
+        Option::Decompress => decompress(&config.input_filename, &config.output_filename),
+    };
+
+    if let Err(err_msg) = status
+    {
+        eprintln!("{err_msg}");
+        return;
+    }
+
+    print_statistics(config);
+}
 
