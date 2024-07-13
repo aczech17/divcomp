@@ -58,7 +58,11 @@ fn main()
     match compress(&input_filename, &output_filename)
     {
         Ok(()) => {},
-        Err(err_msg) => eprintln!("{}", err_msg),
+        Err(err_msg) =>
+        {
+            eprintln!("{}", err_msg);
+            return;
+        }
     };
 
     let input_file_size = fs::metadata(input_filename).unwrap().len();
