@@ -15,16 +15,12 @@ pub struct FileReader
 
 impl FileReader
 {
-    pub fn new(mut file_handle: File) -> FileReader
+    pub fn new(file_handle: File) -> FileReader
     {
-        let mut buffer = [0; BUFFER_SIZE];
-        // let bytes_read_from_file = file_handle.read(&mut buffer)
-        //     .unwrap();
-
         let file_reader = FileReader
         {
             file_handle,
-            buffer,
+            buffer: [0; BUFFER_SIZE],
             bytes_in_buffer: 0,
             bytes_read_from_buffer: 0,
             bits_read_total: 0,
