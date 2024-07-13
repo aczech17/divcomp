@@ -1,13 +1,15 @@
-mod huffman_tree;
-mod file_reader;
-mod bit_vector;
-mod compress;
-mod file_writer;
+pub mod bit_vector;
+pub mod file_writer;
+pub mod huffman_tree;
+pub mod compress;
+pub mod file_reader;
+pub mod decompress;
+
 
 extern crate colored;
-use colored::*;
-use divcomp::compress::compress;
-use divcomp::decompress::decompress;
+
+use compress::compress;
+use decompress::decompress;
 
 mod config;
 use config::*;
