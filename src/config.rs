@@ -72,17 +72,25 @@ pub fn print_statistics(config: Config)
     let input_file_size = fs::metadata(config.input_filename).unwrap().len();
     let output_file_size = fs::metadata(config.output_filename).unwrap().len();
 
-    let compression_rate = (input_file_size as f64) / (output_file_size as f64);
-
     println!("Rozmiar pliku wejściowego:\t{input_file_size}B");
     println!("Rozmiar pliku skompresowanego:\t{output_file_size}B ");
 
-    if compression_rate > 1.0
+    if output_file_size == 0
     {
-        println!("{}", format!("Współczynnik kompresji:\t\t{compression_rate}").green());
+        return;
+    }
+
+    let compression_rate = (input_file_size as f64) / (output_file_size as f64);
+    if compression_rate < 1.0
+    {
+        println!("{}", format!("Współczynnik kompresji:\t\t{compression_rate}").red());
+    }
+    else if compression_rate == 1.0
+    {
+        println!("{}", format!("Współczynnik kompresji:\t\t{compression_rate}").yellow());
     }
     else
     {
-        println!("{}", format!("Współczynnik kompresji:\t\t{compression_rate}").red());
+        println!("{}", format!("Współczynnik kompresji:\t\t{compression_rate}").green());
     }
 }
