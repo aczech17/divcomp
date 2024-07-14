@@ -1,6 +1,6 @@
 use std::fs::File;
 use std::io::Write;
-use crate::bit_vector::{Bit, BitVector};
+use crate::compress_stage::bit_vector::{Bit, BitVector};
 
 const BUFFER_SIZE: usize = 1024;
 

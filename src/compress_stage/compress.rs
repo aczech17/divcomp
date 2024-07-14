@@ -1,8 +1,8 @@
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
-use crate::bit_vector::Bit;
-use crate::file_writer::FileWriter;
-use crate::huffman_tree::HuffmanTree;
+use crate::compress_stage::bit_vector::Bit;
+use crate::compress_stage::file_writer::FileWriter;
+use crate::compress_stage::huffman_tree::HuffmanTree;
 
 fn write_bit_to_file(file: &mut File, bit: Bit, bit_position: usize)
 {

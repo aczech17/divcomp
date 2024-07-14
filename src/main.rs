@@ -1,21 +1,11 @@
-pub mod bit_vector;
-pub mod file_writer;
-pub mod huffman_tree;
-pub mod compress;
-pub mod file_reader;
-pub mod decompress;
-
-
-extern crate colored;
-
-use compress::compress;
-use decompress::decompress;
-
 mod config;
-mod byte_writer;
-
 use config::*;
 
+mod compress_stage;
+use compress_stage::compress::compress;
+use compress_stage::decompress::decompress;
+
+extern crate colored;
 
 fn main()
 {

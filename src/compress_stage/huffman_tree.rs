@@ -1,8 +1,8 @@
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap};
 use std::fs::File;
-use crate::file_reader::FileReader;
-use crate::bit_vector::BitVector;
+use crate::compress_stage::file_reader::FileReader;
+use crate::compress_stage::bit_vector::BitVector;
 
 #[derive(Clone, Eq, PartialEq)]
 struct Node
