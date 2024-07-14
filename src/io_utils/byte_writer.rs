@@ -50,3 +50,10 @@ impl ByteWriter
     }
 }
 
+impl Drop for ByteWriter
+{
+    fn drop(&mut self)
+    {
+        self.flush();
+    }
+}
