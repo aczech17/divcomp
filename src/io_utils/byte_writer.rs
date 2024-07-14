@@ -28,7 +28,7 @@ impl ByteWriter
         Ok(byte_buffer)
     }
 
-    pub fn flush(&mut self)
+    fn flush(&mut self)
     {
         if self.bytes_in_buffer > 0
         {

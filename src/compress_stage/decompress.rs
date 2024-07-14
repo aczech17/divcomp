@@ -64,7 +64,6 @@ pub fn decompress(input_filename: &str, output_filename: &str) -> Result<(), Str
             potential_codeword.clear();
         }
     }
-    output_writer.flush();
 
     Ok(())
 }
