@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 colored = "2.1.0"
+walkdir = "2.5.0"
 
 [profile.release]
 opt-level = 'z'     # Optimize for size

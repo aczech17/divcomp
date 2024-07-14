@@ -5,6 +5,8 @@ mod compress_stage;
 use compress_stage::compress::compress;
 use compress_stage::decompress::decompress;
 
+mod archive_stage;
+
 extern crate colored;
 
 fn main()
