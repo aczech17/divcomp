@@ -12,7 +12,7 @@ use compress::compress;
 use decompress::decompress;
 
 mod config;
-mod byte_buffer;
+mod byte_writer;
 
 use config::*;
 

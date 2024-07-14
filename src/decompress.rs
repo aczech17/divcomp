@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::fs::File;
 use crate::bit_vector::BitVector;
-use crate::byte_buffer::ByteBuffer;
+use crate::byte_writer::ByteWriter;
 use crate::file_reader::FileReader;
 use crate::huffman_tree::HuffmanTree;
 
@@ -49,7 +49,7 @@ pub fn decompress(input_filename: &str, output_filename: &str) -> Result<(), Str
     let dictionary = huffman_tree.get_bytes_encoding();
     let bits_to_read = input_file_size * 8 - padding_size;
 
-    let mut output_file = ByteBuffer::new(output_filename)?;
+    let mut output_writer = ByteWriter::new(output_filename)?;
 
     let mut potential_codeword = BitVector::new();
     while file_reader.bits_read() < bits_to_read
@@ -60,10 +60,11 @@ pub fn decompress(input_filename: &str, output_filename: &str) -> Result<(), Str
         potential_codeword.push_bit(bit);
         if let Some(byte) = get_byte_from_codeword(&dictionary, &potential_codeword)
         {
-            output_file.write_byte(byte);
+            output_writer.write_byte(byte);
             potential_codeword.clear();
         }
     }
+    output_writer.flush();
 
     Ok(())
 }

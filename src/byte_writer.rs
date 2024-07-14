@@ -3,22 +3,22 @@ use std::io::Write;
 
 const BUFFER_SIZE: usize = 1024;
 
-pub struct ByteBuffer
+pub struct ByteWriter
 {
     file_handle: File,
     buffer: [u8; BUFFER_SIZE],
     bytes_in_buffer: usize,
 }
 
-impl ByteBuffer
+impl ByteWriter
 {
-    pub fn new(output_filename: &str) -> Result<ByteBuffer, String>
+    pub fn new(output_filename: &str) -> Result<ByteWriter, String>
     {
         let file_handle = File::create(output_filename)
             .map_err(|_| format!("Could not create file buffer for {}.", output_filename))?;
 
 
-        let byte_buffer = ByteBuffer
+        let byte_buffer = ByteWriter
         {
             file_handle,
             buffer: [0; BUFFER_SIZE],
@@ -28,7 +28,7 @@ impl ByteBuffer
         Ok(byte_buffer)
     }
 
-    fn flush(&mut self)
+    pub fn flush(&mut self)
     {
         if self.bytes_in_buffer > 0
         {
@@ -50,10 +50,3 @@ impl ByteBuffer
     }
 }
 
-impl Drop for ByteBuffer
-{
-    fn drop(&mut self)
-    {
-        self.flush();
-    }
-}
