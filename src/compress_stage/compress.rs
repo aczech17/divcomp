@@ -1,7 +1,7 @@
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
 use crate::compress_stage::bit_vector::Bit;
-use crate::compress_stage::file_writer::FileWriter;
+use crate::compress_stage::bit_vector_writer::BitVectorWriter;
 use crate::compress_stage::huffman_tree::HuffmanTree;
 
 fn write_bit_to_file(file: &mut File, bit: Bit, bit_position: usize)
@@ -59,7 +59,7 @@ pub fn compress(input_filename: &str, output_filename: &str) -> Result<(), Strin
     let tree_encoding = huffman_tree.get_tree_encoding();
     let bytes_encoding = huffman_tree.get_bytes_encoding();
 
-    let mut file_writer = match FileWriter::new(output_filename)
+    let mut file_writer = match BitVectorWriter::new(output_filename)
     {
         Some(fw) => fw,
         None => return Err(format!("Could not create file writer for {}.", output_filename)),

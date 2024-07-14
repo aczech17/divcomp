@@ -4,7 +4,7 @@ use crate::compress_stage::bit_vector::Bit;
 
 const BUFFER_SIZE: usize = 1024;
 
-pub struct FileReader
+pub struct UniversalReader
 {
     file_handle: File,
     buffer: [u8; BUFFER_SIZE],
@@ -13,11 +13,11 @@ pub struct FileReader
     bits_read_total: usize,
 }
 
-impl FileReader
+impl UniversalReader
 {
-    pub fn new(file_handle: File) -> FileReader
+    pub fn new(file_handle: File) -> UniversalReader
     {
-        let file_reader = FileReader
+        let file_reader = UniversalReader
         {
             file_handle,
             buffer: [0; BUFFER_SIZE],
@@ -81,7 +81,7 @@ impl FileReader
     }
 }
 
-impl Iterator for FileReader
+impl Iterator for UniversalReader
 {
     type Item = u8;
 

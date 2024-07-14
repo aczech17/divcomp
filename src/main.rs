@@ -6,6 +6,7 @@ use compress_stage::compress::compress;
 use compress_stage::decompress::decompress;
 
 mod archive_stage;
+mod io_utils;
 
 extern crate colored;
 

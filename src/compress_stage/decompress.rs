@@ -3,7 +3,7 @@ use std::fs;
 use std::fs::File;
 use crate::compress_stage::bit_vector::BitVector;
 use crate::compress_stage::byte_writer::ByteWriter;
-use crate::compress_stage::file_reader::FileReader;
+use crate::compress_stage::universal_reader::UniversalReader;
 use crate::compress_stage::huffman_tree::HuffmanTree;
 
 fn get_byte_from_codeword(dictionary: &HashMap<u8, BitVector>, potential_codeword: &BitVector) -> Option<u8>
@@ -37,7 +37,7 @@ pub fn decompress(input_filename: &str, output_filename: &str) -> Result<(), Str
         Err(err) => return Err(err.to_string()),
     };
 
-    let mut file_reader = FileReader::new(input_file);
+    let mut file_reader = UniversalReader::new(input_file);
 
     let huffman_tree = HuffmanTree::from_code(&mut file_reader);
 

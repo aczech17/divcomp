@@ -4,15 +4,15 @@ use crate::compress_stage::bit_vector::{Bit, BitVector};
 
 const BUFFER_SIZE: usize = 1024;
 
-pub struct FileWriter
+pub struct BitVectorWriter
 {
     file_handle: File,
     buffer: BitVector,
 }
 
-impl FileWriter
+impl BitVectorWriter
 {
-    pub fn new(filename: &str) -> Option<FileWriter>
+    pub fn new(filename: &str) -> Option<BitVectorWriter>
     {
         let file_handle = match File::create(filename)
         {
@@ -20,7 +20,7 @@ impl FileWriter
             Err(_) => return None,
         };
 
-        let file_writer = FileWriter
+        let file_writer = BitVectorWriter
         {
             file_handle,
             buffer: BitVector::new(),

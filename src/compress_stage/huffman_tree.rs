@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap};
 use std::fs::File;
-use crate::compress_stage::file_reader::FileReader;
+use crate::compress_stage::universal_reader::UniversalReader;
 use crate::compress_stage::bit_vector::BitVector;
 
 #[derive(Clone, Eq, PartialEq)]
@@ -90,7 +90,7 @@ impl HuffmanTree
         }
     }
 
-    pub fn from_code(file_reader: &mut FileReader) -> HuffmanTree
+    pub fn from_code(file_reader: &mut UniversalReader) -> HuffmanTree
     {
         let mut head = Node::new(0, 0);
         Self::recreate_from_code_recursive(file_reader, &mut head);
@@ -98,7 +98,7 @@ impl HuffmanTree
         HuffmanTree{head: Some(head)}
     }
 
-    fn recreate_from_code_recursive(file_reader: &mut FileReader, node: &mut Node)
+    fn recreate_from_code_recursive(file_reader: &mut UniversalReader, node: &mut Node)
     {
         let bit = file_reader.read_bit()
             .expect(&format!("{} bits read so far.", file_reader.bits_read()));
@@ -136,7 +136,7 @@ impl HuffmanTree
 
     fn get_flat_node_vector(input: File) -> Vec<Node>
     {
-        let file_reader = FileReader::new(input);
+        let file_reader = UniversalReader::new(input);
         let mut frequency_map = HashMap::new();
 
         for byte in file_reader
