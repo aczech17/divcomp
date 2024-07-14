@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 use std::fs;
 use std::fs::File;
-use std::io::Write;
 use crate::bit_vector::BitVector;
+use crate::byte_buffer::ByteBuffer;
 use crate::file_reader::FileReader;
 use crate::huffman_tree::HuffmanTree;
 
@@ -42,20 +42,15 @@ pub fn decompress(input_filename: &str, output_filename: &str) -> Result<(), Str
     let huffman_tree = HuffmanTree::from_code(&mut file_reader);
 
 
-    let padding_size = ((file_reader.read_bit().unwrap() << 3) |
-                             (file_reader.read_bit().unwrap() << 2) |
+    let padding_size = ((file_reader.read_bit().unwrap() << 2) |
+                             (file_reader.read_bit().unwrap() << 1) |
                              file_reader.read_bit().unwrap()) as usize;
 
     let dictionary = huffman_tree.get_bytes_encoding();
     let bits_to_read = input_file_size * 8 - padding_size;
 
-    let mut output_file = match File::create(output_filename)
-    {
-        Ok(f) => f,
-        Err(err) => return Err(err.to_string()),
-    };
+    let mut output_file = ByteBuffer::new(output_filename)?;
 
-    let mut buffer = [0];
     let mut potential_codeword = BitVector::new();
     while file_reader.bits_read() < bits_to_read
     {
@@ -65,10 +60,7 @@ pub fn decompress(input_filename: &str, output_filename: &str) -> Result<(), Str
         potential_codeword.push_bit(bit);
         if let Some(byte) = get_byte_from_codeword(&dictionary, &potential_codeword)
         {
-            buffer[0] = byte;
-
-            output_file.write(&buffer)
-                .unwrap();
+            output_file.write_byte(byte);
             potential_codeword.clear();
         }
     }
