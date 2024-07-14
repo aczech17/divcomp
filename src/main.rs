@@ -12,6 +12,8 @@ use compress::compress;
 use decompress::decompress;
 
 mod config;
+mod byte_buffer;
+
 use config::*;
 
 
