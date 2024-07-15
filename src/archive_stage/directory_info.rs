@@ -55,8 +55,8 @@ impl DirectoryInfo
         }
     }
 
-    pub fn get_all_file_paths(&self) -> Vec<&String>
+    pub fn get_all_file_paths(&self) -> Vec<String>
     {
-        self.infos.iter().map(|line| &line.path).collect()
+        self.infos.iter().map(|line| line.path.clone()).collect()
     }
 }
