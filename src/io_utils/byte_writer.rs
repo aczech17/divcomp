@@ -1,12 +1,12 @@
 use std::fs::File;
 use std::io::Write;
 
-const BUFFER_SIZE: usize = 1024;
+const BUFFER_SIZE: usize = 1 << 26;
 
 pub struct ByteWriter
 {
     file_handle: File,
-    buffer: [u8; BUFFER_SIZE],
+    buffer: Vec<u8>,
     bytes_in_buffer: usize,
 }
 
@@ -21,7 +21,7 @@ impl ByteWriter
         let byte_buffer = ByteWriter
         {
             file_handle,
-            buffer: [0; BUFFER_SIZE],
+            buffer: vec![0; BUFFER_SIZE],
             bytes_in_buffer: 0,
         };
 
@@ -34,8 +34,8 @@ impl ByteWriter
         {
             self.file_handle.write_all(&self.buffer[0..self.bytes_in_buffer])
                 .unwrap();
+            self.bytes_in_buffer = 0;
         }
-        self.bytes_in_buffer = 0;
     }
 
     pub fn write_byte(&mut self, byte: u8)
