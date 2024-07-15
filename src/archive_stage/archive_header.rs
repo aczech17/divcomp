@@ -11,8 +11,7 @@ impl ArchiveHeader
     pub fn new(directory_infos: Vec<DirectoryInfo>) -> ArchiveHeader
     {
         let data: Vec<u8> = directory_infos.iter()
-            .flat_map(|info| serde_json::to_string(info)
-                .unwrap().into_bytes())
+            .flat_map(|info| info.to_bytes())
             .collect();
 
         let data_size = data.len() as u64;

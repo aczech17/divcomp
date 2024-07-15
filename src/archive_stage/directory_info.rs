@@ -55,6 +55,12 @@ impl DirectoryInfo
         }
     }
 
+    pub fn to_bytes(&self) -> Vec<u8>
+    {
+        serde_json::to_string(self).unwrap()
+            .into_bytes()
+    }
+
     pub fn get_all_file_paths(&self) -> Vec<String>
     {
         self.infos.iter().map(|line| line.path.clone()).collect()
