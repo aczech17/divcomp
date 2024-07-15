@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io::Write;
 use crate::compress_stage::bit_vector::{Bit, BitVector};
 
-const BUFFER_SIZE: usize = 1024;
+const BUFFER_SIZE: usize = 8 * (1 << 26);
 
 pub struct BitVectorWriter
 {
