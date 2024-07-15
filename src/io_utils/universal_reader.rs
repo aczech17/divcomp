@@ -2,12 +2,12 @@ use std::fs::File;
 use std::io::Read;
 use crate::compress_stage::bit_vector::Bit;
 
-const BUFFER_SIZE: usize = 1024;
+const BUFFER_SIZE: usize = 1 << 26;
 
 pub struct UniversalReader
 {
     file_handle: File,
-    buffer: [u8; BUFFER_SIZE],
+    buffer: Vec<u8>,
     bytes_in_buffer: usize,
     bytes_read_from_buffer: usize,
     bits_read_total: usize,
@@ -20,7 +20,7 @@ impl UniversalReader
         let file_reader = UniversalReader
         {
             file_handle,
-            buffer: [0; BUFFER_SIZE],
+            buffer: vec![0; BUFFER_SIZE],
             bytes_in_buffer: 0,
             bytes_read_from_buffer: 0,
             bits_read_total: 0,
