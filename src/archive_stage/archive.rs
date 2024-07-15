@@ -6,7 +6,7 @@ use crate::io_utils::universal_reader::UniversalReader;
 
 fn save_file_to_archive(file_path: &str, output: &mut ByteWriter)
 {
-    let input_file = File::create(file_path)
+    let input_file = File::open(file_path)
         .unwrap();
 
     let mut reader = UniversalReader::new(input_file);
