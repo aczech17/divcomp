@@ -3,6 +3,7 @@ use std::io::{Read, Seek, SeekFrom, Write};
 use crate::compress_stage::bit_vector::Bit;
 use crate::compress_stage::bit_vector_writer::BitVectorWriter;
 use crate::compress_stage::huffman_tree::HuffmanTree;
+use crate::io_utils::universal_reader::UniversalReader;
 
 fn write_bit_to_file(file: &mut File, bit: Bit, bit_position: usize)
 {
@@ -73,26 +74,18 @@ pub fn compress(input_filename: &str, output_filename: &str) -> Result<(), Strin
     file_writer.write_bit(0);
     file_writer.write_bit(0);
 
-    let mut input = match File::open(input_filename)
+    // Reopen the file.
+    let input = match File::open(input_filename)
     {
         Ok(file) => file,
         Err(_) => return Err(format!("Could not open file {} second time.", input_filename)),
     };
+    let mut buffer = UniversalReader::new(input);
 
 
     // read byte by byte
-    let mut buffer = [0; 1];
-    loop
+    while let Some(byte) = buffer.read_byte()
     {
-        let bytes_read = input.read(&mut buffer)
-            .unwrap();
-
-        if bytes_read == 0
-        {
-            break;
-        }
-
-        let byte = buffer[0];
         let codeword = bytes_encoding.get(&byte)
             .expect(&format!("Could not find codeword for byte {:X}", byte));
 
