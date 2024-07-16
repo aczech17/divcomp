@@ -83,37 +83,3 @@ pub fn parse_arguments() -> Result<Config, String>
 
     Ok(config)
 }
-
-//
-// pub fn print_statistics(config: Config)
-// {
-//     if config.option == ConfigOption::Decompress
-//     {
-//         return;
-//     }
-//
-//     let input_file_size = fs::metadata(config.input_filename).unwrap().len();
-//     let output_file_size = fs::metadata(config.output_archive_filename).unwrap().len();
-//
-//     println!("Rozmiar pliku wejściowego:\t{input_file_size}B");
-//     println!("Rozmiar pliku skompresowanego:\t{output_file_size}B ");
-//
-//     if output_file_size == 0
-//     {
-//         return;
-//     }
-//
-//     let compression_rate = (input_file_size as f64) / (output_file_size as f64);
-//     if compression_rate < 1.0
-//     {
-//         println!("{}", format!("Współczynnik kompresji:\t\t{compression_rate}").red());
-//     }
-//     else if compression_rate == 1.0
-//     {
-//         println!("{}", format!("Współczynnik kompresji:\t\t{compression_rate}").yellow());
-//     }
-//     else
-//     {
-//         println!("{}", format!("Współczynnik kompresji:\t\t{compression_rate}").green());
-//     }
-// }
