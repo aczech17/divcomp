@@ -1,6 +1,7 @@
 mod config;
 
-use std::env::args;
+use std::path::Path;
+use rand::Rng;
 use config::*;
 
 mod compress_stage;
@@ -13,6 +14,47 @@ mod archive_stage;
 mod io_utils;
 
 extern crate colored;
+
+fn get_tmp_file_name() -> Result<String, ()>
+{
+    const FILENAME_SIZE: usize = 10;
+    const MAX_ATTEMPTS_COUNT: usize = 10;
+
+    let mut rng = rand::thread_rng();
+
+    for _ in 0..MAX_ATTEMPTS_COUNT
+    {
+        let filename: String = (0..FILENAME_SIZE)
+            .map(|_| rng.sample(rand::distributions::Alphanumeric))
+            .map(char::from)
+            .collect();
+
+        if !Path::new(&filename).exists()
+        {
+            return Ok(filename);
+        }
+    }
+
+    Err(())
+}
+
+fn archive_and_compress(input_paths: Vec<String>, archive_filename: String) -> Result<(), String>
+{
+    let tmp_file_name = get_tmp_file_name()
+        .map_err(|_| "Could not find a proper name for a temporary file while archiving.")?;
+    archive(input_paths, tmp_file_name.clone())?;
+
+    compress(&tmp_file_name, &archive_filename)
+}
+
+fn decompress_and_extract(archive_filename: String) -> Result<(), String>
+{
+    let tmp_filename = get_tmp_file_name()
+        .map_err(|_| "Could not find a proper name for a temporary file while decompressing.")?;
+    decompress(&archive_filename, &tmp_filename)?;
+
+    extract(&tmp_filename)
+}
 
 fn main()
 {
@@ -29,13 +71,13 @@ fn main()
     let result = match config.option
     {
         ConfigOption::Archive =>
-            archive(config.input_filenames, config.output_archive_filename.unwrap()),
+            archive_and_compress(config.input_filenames, config.output_archive_filename.unwrap()),
 
         ConfigOption::Extract =>
-            {
-                let archive_filename = &config.input_filenames[0];
-                extract(archive_filename)
-            }
+        {
+            let archive_filename = config.input_filenames[0].clone();
+            decompress_and_extract(archive_filename)
+        }
     };
 
     if let Err(err_msg) = result

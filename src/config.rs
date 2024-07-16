@@ -1,7 +1,5 @@
 use std::env::args;
-use std::fs;
 use std::path::Path;
-use colored::Colorize;
 
 #[derive(Eq, PartialEq)]
 pub enum ConfigOption
