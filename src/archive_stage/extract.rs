@@ -1,4 +1,6 @@
+use std::fs;
 use std::fs::{create_dir, File};
+use std::path::Path;
 use crate::archive_stage::directory_info::DirectoryInfo;
 use crate::io_utils::byte_buffer::ByteBuffer;
 use crate::io_utils::byte_writer::ByteWriter;
@@ -61,12 +63,23 @@ pub fn extract(archive_filename: &str) -> Result<(), String>
         .flat_map(|dirinfo| dirinfo.get_paths_and_sizes())
         .collect();
 
-    for (path, size) in paths_and_sizes
+
+    // If any file or directory already exists, don't extract anything.
+    for (output_path, _size) in &paths_and_sizes
+    {
+        if Path::new(&output_path).exists()
+        {
+            let err_msg = format!("{} already exists.", output_path);
+            return Err(err_msg);
+        }
+    }
+
+    for (output_path, size) in paths_and_sizes
     {
         match size
         {
-            None => create_dir(path).unwrap(),
-            Some(size) => extract_file_content(path, size, &mut reader),
+            None => create_dir(output_path).unwrap(),
+            Some(size) => extract_file_content(output_path, size, &mut reader),
         }
     }
 

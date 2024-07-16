@@ -18,7 +18,7 @@ fn save_file_to_archive(file_path: &str, output: &mut ByteWriter)
     }
 }
 
-pub fn archive(input_paths: Vec<String>, output_filename: String)
+pub fn archive(input_paths: Vec<String>, output_filename: String) -> Result<(), String>
 {
     let all_directory_infos: Vec<DirectoryInfo> = input_paths.iter()
         .map(|path| DirectoryInfo::new(path))
@@ -30,8 +30,8 @@ pub fn archive(input_paths: Vec<String>, output_filename: String)
 
     let archive_header = ArchiveHeader::new(all_directory_infos);
 
-    let mut output_writer = ByteWriter::new(&output_filename)
-        .unwrap();
+    let mut output_writer = ByteWriter::new(&output_filename)?;
+
     for byte in archive_header.to_bytes()
     {
         output_writer.write_byte(byte);
@@ -44,4 +44,6 @@ pub fn archive(input_paths: Vec<String>, output_filename: String)
             save_file_to_archive(&path, &mut output_writer);
         }
     }
+
+    Ok(())
 }

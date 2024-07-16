@@ -16,16 +16,31 @@ extern crate colored;
 
 fn main()
 {
-    // let inputs = vec!["empty.txt", "lotto.txt", "supdir", "pusty"]
-    //     .iter().map(|s| s.to_string())
-    //     .collect();
-    //
-    // archive(inputs, "archive.bin".to_string());
+    let config = match parse_arguments()
+    {
+        Ok(c) => c,
+        Err(err_msg) =>
+        {
+            eprintln!("{}", err_msg);
+            return;
+        }
+    };
 
-    let args: Vec<String> = args().collect();
-    let name = &args[1];
+    let result = match config.option
+    {
+        ConfigOption::Archive =>
+            archive(config.input_filenames, config.output_archive_filename.unwrap()),
 
-    extract(name)
-        .unwrap();
+        ConfigOption::Extract =>
+            {
+                let archive_filename = &config.input_filenames[0];
+                extract(archive_filename)
+            }
+    };
+
+    if let Err(err_msg) = result
+    {
+        eprintln!("{}", err_msg);
+    }
 }
 

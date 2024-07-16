@@ -4,93 +4,118 @@ use std::path::Path;
 use colored::Colorize;
 
 #[derive(Eq, PartialEq)]
-pub enum Option
+pub enum ConfigOption
 {
-    Compress, Decompress,
+    Archive, Extract,
 }
 
 pub struct Config
 {
-    pub input_filename: String,
-    pub output_filename: String,
-    pub option: Option,
+    pub input_filenames: Vec<String>,
+    pub output_archive_filename: Option<String>,
+    pub option: ConfigOption,
 }
 
 pub fn parse_arguments() -> Result<Config, String>
 {
-    let usage = "divcomp [-c|-d] [input] [output]";
+    let usage = "divcomp [-a|-e] [inputs] -o [output]";
 
     let args: Vec<String> = args().collect();
 
-    if args.len() < 4
+    if args.len() < 3
     {
         return Err(String::from(usage));
     }
 
     let option = match args[1].as_str()
     {
-        "-c" => Option::Compress,
-        "-d" => Option::Decompress,
+        "-a" => ConfigOption::Archive,
+        "-e" => ConfigOption::Extract,
         _ => return Err(usage.to_string()),
     };
 
-    let input_filename = &args[2];
-    let output_filename = &args[3];
-
-    if !Path::new(input_filename).exists()
+    let (inputs, output) = match args.iter().position(|s| s == "-o")
     {
-        return Err(format!("File {input_filename} does not exist."));
+        None =>
+        {
+                if option == ConfigOption::Extract
+                {
+                    let ins = args[2..].to_vec();
+                    let outs = None;
+
+                    (ins, outs)
+                }
+                else
+                {
+                    return Err(String::from(usage));
+                }
+        }
+
+        Some(pos) =>
+        {
+            let ins = args[2..pos].to_vec();
+            let outs = Some(args[pos + 1].to_owned());
+
+            (ins, outs)
+        }
+    };
+
+    for input in &inputs
+    {
+        if !Path::new(input).exists()
+        {
+            return Err(format!("Path {} does not exist.", input));
+        }
     }
 
-    if !Path::new(input_filename).is_file()
+    match &output
     {
-        return Err(format!("{input_filename} is not a regular file."));
-    }
-
-    if Path::new(output_filename).exists()
-    {
-        return Err(format!("{output_filename} already exists."));
-    }
+        Some(name) if Path::new(name).exists() =>
+            return Err(format!("Path {} already exists.", name)),
+        None => {},
+        _ => {}, // ???
+    };
 
     let config = Config
     {
-        input_filename: input_filename.to_string(),
-        output_filename: output_filename.to_string(),
+        input_filenames: inputs,
+        output_archive_filename: output,
         option,
     };
 
     Ok(config)
 }
 
-pub fn print_statistics(config: Config)
-{
-    if config.option == Option::Decompress
-    {
-        return;
-    }
-
-    let input_file_size = fs::metadata(config.input_filename).unwrap().len();
-    let output_file_size = fs::metadata(config.output_filename).unwrap().len();
-
-    println!("Rozmiar pliku wejściowego:\t{input_file_size}B");
-    println!("Rozmiar pliku skompresowanego:\t{output_file_size}B ");
-
-    if output_file_size == 0
-    {
-        return;
-    }
-
-    let compression_rate = (input_file_size as f64) / (output_file_size as f64);
-    if compression_rate < 1.0
-    {
-        println!("{}", format!("Współczynnik kompresji:\t\t{compression_rate}").red());
-    }
-    else if compression_rate == 1.0
-    {
-        println!("{}", format!("Współczynnik kompresji:\t\t{compression_rate}").yellow());
-    }
-    else
-    {
-        println!("{}", format!("Współczynnik kompresji:\t\t{compression_rate}").green());
-    }
-}
+//
+// pub fn print_statistics(config: Config)
+// {
+//     if config.option == ConfigOption::Decompress
+//     {
+//         return;
+//     }
+//
+//     let input_file_size = fs::metadata(config.input_filename).unwrap().len();
+//     let output_file_size = fs::metadata(config.output_archive_filename).unwrap().len();
+//
+//     println!("Rozmiar pliku wejściowego:\t{input_file_size}B");
+//     println!("Rozmiar pliku skompresowanego:\t{output_file_size}B ");
+//
+//     if output_file_size == 0
+//     {
+//         return;
+//     }
+//
+//     let compression_rate = (input_file_size as f64) / (output_file_size as f64);
+//     if compression_rate < 1.0
+//     {
+//         println!("{}", format!("Współczynnik kompresji:\t\t{compression_rate}").red());
+//     }
+//     else if compression_rate == 1.0
+//     {
+//         println!("{}", format!("Współczynnik kompresji:\t\t{compression_rate}").yellow());
+//     }
+//     else
+//     {
+//         println!("{}", format!("Współczynnik kompresji:\t\t{compression_rate}").green());
+//     }
+// }
