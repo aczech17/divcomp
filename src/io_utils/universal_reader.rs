@@ -63,7 +63,7 @@ impl UniversalReader
 
     pub fn read_bit(&mut self) -> Option<Bit>
     {
-        if (self.bits_read_total) % (8 * self.bytes_in_buffer) == 0
+        if self.bytes_in_buffer == 0 || (self.bits_read_total) % (8 * self.bytes_in_buffer) == 0
         {
             self.refill_buffer();
             if self.bytes_in_buffer == 0
