@@ -35,6 +35,7 @@ impl FilesystemEntryInfo
 pub struct DirectoryInfo
 {
     infos: Vec<FilesystemEntryInfo>,
+    iterator_index: usize,
 }
 
 impl DirectoryInfo
@@ -52,6 +53,7 @@ impl DirectoryInfo
         DirectoryInfo
         {
             infos: entry_infos,
+            iterator_index: 0,
         }
     }
 
@@ -65,8 +67,39 @@ impl DirectoryInfo
         [bytes_size, bytes].concat()
     }
 
+    pub fn from_bytes(bytes: &[u8]) -> DirectoryInfo
+    {
+        let data_string = String::from_utf8(Vec::from(bytes))
+            .unwrap();
+
+        serde_json::from_str(&data_string)
+            .unwrap()
+    }
+
     pub fn get_all_file_paths(&self) -> Vec<String>
     {
         self.infos.iter().map(|line| line.path.clone()).collect()
+    }
+
+    pub fn rewind(&mut self)
+    {
+        self.iterator_index = 0;
+    }
+}
+
+impl Iterator for DirectoryInfo
+{
+    type Item = (String, Option<u64>);
+
+    fn next(&mut self) -> Option<Self::Item>
+    {
+        if self.iterator_index >= self.infos.len()
+        {
+            return None;
+        }
+
+        let entry = &self.infos[self.iterator_index];
+        self.iterator_index += 1;
+        Some((entry.path.clone(), entry.size))
     }
 }
