@@ -28,7 +28,8 @@ pub fn archive(input_paths: Vec<String>, output_filename: String) -> Result<(), 
         .flat_map(|info| info.get_all_file_paths())
         .collect();
 
-    let archive_header = ArchiveHeader::new(all_directory_infos);
+    let archive_header = ArchiveHeader::new(all_directory_infos)
+        .map_err(|_| "Could not create archive header.")?;
 
     let mut output_writer = ByteWriter::new(&output_filename)?;
 

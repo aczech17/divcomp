@@ -90,18 +90,23 @@ impl HuffmanTree
         }
     }
 
-    pub fn from_code(file_reader: &mut UniversalReader) -> HuffmanTree
+    pub fn from_code(file_reader: &mut UniversalReader) -> Result<HuffmanTree, ()>
     {
         let mut head = Node::new(0, 0);
-        Self::recreate_from_code_recursive(file_reader, &mut head);
+        Self::recreate_from_code_recursive(file_reader, &mut head)?;
 
-        HuffmanTree{head: Some(head)}
+        let tree = HuffmanTree{head: Some(head)};
+        Ok(tree)
     }
 
     fn recreate_from_code_recursive(file_reader: &mut UniversalReader, node: &mut Node)
+        -> Result<(), ()>
     {
-        let bit = file_reader.read_bit()
-            .expect(&format!("{} bits read so far.", file_reader.bits_read()));
+        let bit = match file_reader.read_bit()
+        {
+            Some(b) => b,
+            None => return Err(())
+        };
 
         if bit == 0
         {
@@ -110,7 +115,7 @@ impl HuffmanTree
 
             if let Some(left) = &mut node.left
             {
-                Self::recreate_from_code_recursive(file_reader, left);
+                Self::recreate_from_code_recursive(file_reader, left)?;
             }
 
             let right_son = Node::new(0, 0);
@@ -118,7 +123,7 @@ impl HuffmanTree
 
             if let Some(right) = &mut node.right
             {
-                Self::recreate_from_code_recursive(file_reader, right);
+                Self::recreate_from_code_recursive(file_reader, right)?;
             }
         }
         else // bit == 1
@@ -126,12 +131,19 @@ impl HuffmanTree
             let mut value = 0;
             for shift in (0..8).rev()
             {
-                let next_bit = file_reader.read_bit().unwrap();
+                let next_bit = match file_reader.read_bit()
+                {
+                    Some(b) => b,
+                    None => return Err(()),
+                };
+
                 value |= next_bit << shift;
             }
 
             node.data = value;
         }
+
+        Ok(())
     }
 
     fn get_flat_node_vector(input: File) -> Vec<Node>

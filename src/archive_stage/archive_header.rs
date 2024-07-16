@@ -8,19 +8,24 @@ pub struct ArchiveHeader
 
 impl ArchiveHeader
 {
-    pub fn new(directory_infos: Vec<DirectoryInfo>) -> ArchiveHeader
+    pub fn new(directory_infos: Vec<DirectoryInfo>) -> Result<ArchiveHeader, ()>
     {
-        let data: Vec<u8> = directory_infos.iter()
-            .flat_map(|info| info.to_bytes())
-            .collect();
+        let mut data = vec![];
+        for info in directory_infos
+        {
+            let mut info_bytes = info.to_bytes()?;
+            data.append(&mut info_bytes);
+        }
 
         let data_size = data.len() as u64;
 
-        ArchiveHeader
+        let archive_header = ArchiveHeader
         {
             header_size: data_size,
             header_data: data,
-        }
+        };
+
+        Ok(archive_header)
     }
 
     pub fn to_bytes(&self) -> Vec<u8>

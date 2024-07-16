@@ -51,7 +51,8 @@ pub fn decompress(input_filename: &str, output_filename: &str) -> Result<(), Str
     }
 
 
-    let huffman_tree = HuffmanTree::from_code(&mut file_reader);
+    let huffman_tree = HuffmanTree::from_code(&mut file_reader)
+        .map_err(|_| "Could not recreate tree from code.")?;
     let dictionary = huffman_tree.get_bytes_encoding();
 
 
