@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::fs;
 use std::fs::File;
-use std::io::Read;
 use crate::io_utils::bit_vector::BitVector;
 use crate::compress_stage::byte_writer::ByteWriter;
 use crate::compress_stage::universal_reader::UniversalReader;
@@ -34,37 +33,34 @@ pub fn decompress(input_filename: &str, output_filename: &str) -> Result<(), Str
         return Ok(());
     }
 
-    let mut input_file = match File::open(input_filename)
+    let input_file = match File::open(input_filename)
     {
         Ok(f) => f,
         Err(err) => return Err(err.to_string()),
     };
+    let mut file_reader = UniversalReader::new(input_file);
 
     // Read the file signature.
-    let mut signature_bytes: Vec<u8> = vec![0; FILE_SIGNATURE.len()];
-    input_file.read_exact(&mut signature_bytes)
+    let signature_bytes = file_reader.read_some_bytes(FILE_SIGNATURE.len())
         .map_err(|_| "Could not read file signature.")?;
-
     let signature = String::from_utf8(signature_bytes)
-        .map_err(|_| "Could not read file signature.")?;
-
-    println!("SIGNATURE = {}", signature);
+        .map_err(|_| "Could not parse file signature.")?;
     if signature != FILE_SIGNATURE
     {
         return Err("Bad file format".to_string());
     }
 
 
-    let mut file_reader = UniversalReader::new(input_file);
-
     let huffman_tree = HuffmanTree::from_code(&mut file_reader);
+    let dictionary = huffman_tree.get_bytes_encoding();
+
 
     let padding_size = ((file_reader.read_bit().unwrap() << 2) |
                              (file_reader.read_bit().unwrap() << 1) |
                              file_reader.read_bit().unwrap()) as usize;
 
-    let dictionary = huffman_tree.get_bytes_encoding();
     let bits_to_read = input_file_size * 8 - padding_size;
+
 
     let mut output_writer = ByteWriter::new(output_filename)?;
 

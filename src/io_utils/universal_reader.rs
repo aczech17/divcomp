@@ -50,6 +50,7 @@ impl UniversalReader
 
         let data = self.buffer[self.bytes_read_from_buffer];
         self.bytes_read_from_buffer += 1;
+        self.bits_read_total += 8;
 
         Some(data)
     }
