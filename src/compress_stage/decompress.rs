@@ -6,7 +6,6 @@ use crate::compress_stage::byte_writer::ByteWriter;
 use crate::compress_stage::universal_reader::UniversalReader;
 use crate::compress_stage::huffman_tree::HuffmanTree;
 
-use crate::main_module::FILE_SIGNATURE;
 
 fn get_byte_from_codeword(dictionary: &HashMap<u8, BitVector>, potential_codeword: &BitVector) -> Option<u8>
 {
@@ -39,16 +38,6 @@ pub fn decompress(input_filename: &str, output_filename: &str) -> Result<(), Str
         Err(err) => return Err(err.to_string()),
     };
     let mut file_reader = UniversalReader::new(input_file);
-
-    // Read the file signature.
-    let signature_bytes = file_reader.read_some_bytes(FILE_SIGNATURE.len())
-        .map_err(|_| "Could not read file signature.")?;
-    let signature = String::from_utf8(signature_bytes)
-        .map_err(|_| "Could not parse file signature.")?;
-    if signature != FILE_SIGNATURE
-    {
-        return Err("Bad file format".to_string());
-    }
 
 
     let huffman_tree = HuffmanTree::from_code(&mut file_reader)

@@ -1,11 +1,10 @@
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
-use crate::io_utils::bit_vector::{Bit, BitVector};
-use crate::io_utils::bit_vector_writer::BitVectorWriter;
-use crate::compress_stage::huffman_tree::HuffmanTree;
-use crate::io_utils::universal_reader::UniversalReader;
 
-use crate::main_module::FILE_SIGNATURE;
+use crate::compress_stage::huffman_tree::HuffmanTree;
+use crate::io_utils::bit_vector::Bit;
+use crate::io_utils::bit_vector_writer::BitVectorWriter;
+use crate::io_utils::universal_reader::UniversalReader;
 
 fn write_bit_to_file(file: &mut File, bit: Bit, bit_position: usize)
 {
@@ -69,13 +68,6 @@ pub fn compress(input_filename: &str, output_filename: &str) -> Result<(), Strin
     };
 
     // Start writing to file.
-
-    // Write signature to the compressed file
-    let mut signature = BitVector::new();
-    FILE_SIGNATURE.to_string().bytes()
-        .for_each(|byte| signature.push_byte(byte));
-    file_writer.write_bit_vector(&signature);
-
     file_writer.write_bit_vector(&tree_encoding);
     let padding_size_position = tree_encoding.size();
 
