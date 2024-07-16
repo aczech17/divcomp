@@ -35,7 +35,6 @@ impl FilesystemEntryInfo
 pub struct DirectoryInfo
 {
     infos: Vec<FilesystemEntryInfo>,
-    iterator_index: usize,
 }
 
 impl DirectoryInfo
@@ -53,7 +52,6 @@ impl DirectoryInfo
         DirectoryInfo
         {
             infos: entry_infos,
-            iterator_index: 0,
         }
     }
 
@@ -81,25 +79,18 @@ impl DirectoryInfo
         self.infos.iter().map(|line| line.path.clone()).collect()
     }
 
-    pub fn rewind(&mut self)
+    pub fn get_paths_and_sizes(&self) -> Vec<(String, Option<u64>)>
     {
-        self.iterator_index = 0;
-    }
-}
+        let mut result = vec![];
 
-impl Iterator for DirectoryInfo
-{
-    type Item = (String, Option<u64>);
-
-    fn next(&mut self) -> Option<Self::Item>
-    {
-        if self.iterator_index >= self.infos.len()
+        for info in &self.infos
         {
-            return None;
+            let path = info.path.clone();
+            let size = info.size;
+
+            result.push((path, size));
         }
 
-        let entry = &self.infos[self.iterator_index];
-        self.iterator_index += 1;
-        Some((entry.path.clone(), entry.size))
+        result
     }
 }
