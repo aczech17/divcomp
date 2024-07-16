@@ -33,7 +33,6 @@ impl UniversalReader
     {
         self.bytes_in_buffer = self.file_handle.read(&mut self.buffer)
             .unwrap();
-
         self.bytes_read_from_buffer = 0;
     }
 
@@ -64,7 +63,7 @@ impl UniversalReader
 
     pub fn read_bit(&mut self) -> Option<Bit>
     {
-        if (self.bits_read_total) % (BUFFER_SIZE * 8) == 0
+        if (self.bits_read_total) % (self.bytes_in_buffer * 8) == 0
         {
             self.refill_buffer();
             if self.bytes_in_buffer == 0
