@@ -1,3 +1,4 @@
+use std::fs;
 use std::fs::File;
 use crate::archive_stage::archive_header::ArchiveHeader;
 use crate::archive_stage::directory_info::DirectoryInfo;
@@ -7,7 +8,7 @@ use crate::io_utils::universal_reader::UniversalReader;
 fn save_file_to_archive(file_path: &str, output: &mut ByteWriter)
 {
     let input_file = File::open(file_path)
-        .unwrap();
+        .expect(&format!("Could not open file {}", file_path));
 
     let mut reader = UniversalReader::new(input_file);
 
@@ -38,6 +39,9 @@ pub fn archive(input_paths: Vec<String>, output_filename: String)
 
     for path in all_paths
     {
-        save_file_to_archive(&path, &mut output_writer);
+        if !fs::metadata(&path).unwrap().is_dir()
+        {
+            save_file_to_archive(&path, &mut output_writer);
+        }
     }
 }
