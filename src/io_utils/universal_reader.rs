@@ -54,6 +54,13 @@ impl UniversalReader
         Some(data)
     }
 
+    pub fn read_some_bytes(&mut self, count: usize) -> Result<Vec<u8>, ()>
+    {
+        (0..count)
+            .map(|_| self.read_byte().ok_or(()))
+            .collect()
+    }
+
     pub fn read_bit(&mut self) -> Option<Bit>
     {
         if (self.bits_read_total) % (BUFFER_SIZE * 8) == 0
