@@ -9,6 +9,8 @@ use crate::compress_stage::decompress::decompress;
 use crate::archive_stage::archive::archive;
 use crate::archive_stage::extract::extract;
 
+pub const FILE_SIGNATURE: &str = "SAAC";
+
 
 fn get_tmp_file_name() -> Result<String, ()>
 {

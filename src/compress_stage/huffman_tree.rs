@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap};
 use std::fs::File;
 use crate::compress_stage::universal_reader::UniversalReader;
-use crate::compress_stage::bit_vector::BitVector;
+use crate::io_utils::bit_vector::BitVector;
 
 #[derive(Clone, Eq, PartialEq)]
 struct Node
