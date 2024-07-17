@@ -1,7 +1,8 @@
 use main_module::archive_and_compress;
 use main_module::config::{ConfigOption, parse_arguments};
-
-use crate::main_module::Extractor;
+use crate::main_module::extractor::Extractor;
+use crate::main_module::print_archive_info;
+//use crate::main_module
 
 mod main_module;
 mod compress_stage;
@@ -26,19 +27,16 @@ fn main()
             archive_and_compress(config.input_filenames, config.output_archive_filename.unwrap())
             .unwrap(),
         ConfigOption::Extract =>
-            {
-                let archive_filename = config.input_filenames[0].clone();
-                let mut extractor = Extractor::new(archive_filename)
-                    .unwrap();
+        {
+            let archive_filename = config.input_filenames[0].clone();
+            let mut extractor = Extractor::new(archive_filename)
+                .unwrap();
 
-                for (path, size) in extractor.get_archive_info()
-                {
-                    println!("{} - {:?}", path, size);
-                }
+            print_archive_info(&extractor);
 
-                extractor.extract()
-                    .unwrap();
-            }
+            extractor.extract()
+                .unwrap();
+        }
     }
 
 }
