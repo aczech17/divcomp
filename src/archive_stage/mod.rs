@@ -1,4 +1,4 @@
-mod directory_info;
+pub mod directory_info;
 mod archive_header;
 pub mod archive;
 pub mod extract;

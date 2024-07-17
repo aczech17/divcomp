@@ -19,21 +19,21 @@ fn main()
         }
     };
 
-    let result = match config.option
-    {
-        ConfigOption::Archive =>
-            archive_and_compress(config.input_filenames, config.output_archive_filename.unwrap()),
+    // let result = match config.option
+    // {
+    //     ConfigOption::Archive =>
+    //         archive_and_compress(config.input_filenames, config.output_archive_filename.unwrap()),
+    //
+    //     ConfigOption::Extract =>
+    //     {
+    //         let archive_filename = config.input_filenames[0].clone();
+    //         decompress_and_extract(archive_filename)
+    //     }
+    // };
 
-        ConfigOption::Extract =>
-        {
-            let archive_filename = config.input_filenames[0].clone();
-            decompress_and_extract(archive_filename)
-        }
-    };
-
-    if let Err(err_msg) = result
-    {
-        eprintln!("{}", err_msg);
-    }
+    // if let Err(err_msg) = result
+    // {
+    //     eprintln!("{}", err_msg);
+    // }
 }
 

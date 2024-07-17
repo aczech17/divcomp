@@ -3,13 +3,10 @@ use std::path::Path;
 use crate::archive_stage::directory_info::DirectoryInfo;
 use crate::io_utils::byte_buffer::ByteBuffer;
 use crate::io_utils::byte_writer::ByteWriter;
+use crate::io_utils::bytes_to_u64;
 use crate::io_utils::universal_reader::UniversalReader;
 
-fn bytes_to_u64(bytes: Vec<u8>) -> u64
-{
-    let buffer: [u8; 8] = bytes.try_into().unwrap();
-    u64::from_be_bytes(buffer)
-}
+
 
 fn read_u64(reader: &mut UniversalReader) -> Result<u64, String>
 {

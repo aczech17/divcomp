@@ -1,73 +1,129 @@
 use std::collections::HashMap;
 use std::fs;
 use std::fs::File;
-use crate::io_utils::bit_vector::BitVector;
+
 use crate::compress_stage::byte_writer::ByteWriter;
-use crate::compress_stage::universal_reader::UniversalReader;
 use crate::compress_stage::huffman_tree::HuffmanTree;
+use crate::compress_stage::universal_reader::UniversalReader;
+use crate::io_utils::bit_vector::BitVector;
 
-
-fn get_byte_from_codeword(dictionary: &HashMap<u8, BitVector>, potential_codeword: &BitVector) -> Option<u8>
+pub enum DecompressError
 {
-    for (byte, value) in dictionary
-    {
-        if value == potential_codeword
-        {
-            return Some(*byte);
-        }
-    }
-
-    None
+    EmptyFile, BadFormat, FileTooShort, FileOpenError, Other,
 }
 
-pub fn decompress(input_filename: &str, output_filename: &str) -> Result<(), String>
+type Dictionary = HashMap<u8, BitVector>;
+type PaddingSize = usize;
+
+pub struct Decompressor
 {
-    let input_file_size = fs::metadata(input_filename)
-        .unwrap()
-        .len() as usize;
-
-    if input_file_size == 0
-    {
-        let _empty_file = File::create(output_filename).map_err(|s| s.to_string())?;
-        return Ok(());
-    }
-
-    let input_file = match File::open(input_filename)
-    {
-        Ok(f) => f,
-        Err(err) => return Err(err.to_string()),
-    };
-    let mut file_reader = UniversalReader::new(input_file);
-
-
-    let huffman_tree = HuffmanTree::from_code(&mut file_reader)
-        .map_err(|_| "Could not recreate tree from code.")?;
-    let dictionary = huffman_tree.get_bytes_encoding();
-
-
-    let padding_size = ((file_reader.read_bit().unwrap() << 2) |
-                             (file_reader.read_bit().unwrap() << 1) |
-                             file_reader.read_bit().unwrap()) as usize;
-
-    let bits_to_read = input_file_size * 8 - padding_size;
-
-
-    let mut output_writer = ByteWriter::new(output_filename)?;
-
-    let mut potential_codeword = BitVector::new();
-    while file_reader.bits_read() < bits_to_read
-    {
-        let bit = file_reader.read_bit()
-            .expect("Unexpected end of file ¯\\(ツ)/¯");
-
-        potential_codeword.push_bit(bit);
-        if let Some(byte) = get_byte_from_codeword(&dictionary, &potential_codeword)
-        {
-            output_writer.write_byte(byte);
-            potential_codeword.clear();
-        }
-    }
-
-    Ok(())
+    file_reader: UniversalReader,
+    dictionary: Dictionary,
+    input_file_size: usize,
+    padding_size: PaddingSize,
 }
 
+impl Decompressor
+{
+
+    pub fn new(input_filename: &str) -> Result<Decompressor, DecompressError>
+    {
+        let input_file_size = fs::metadata(input_filename)
+            .unwrap()
+            .len() as usize;
+
+        if input_file_size == 0
+        {
+            return Err(DecompressError::EmptyFile);
+        }
+
+        let input_file = match File::open(input_filename)
+        {
+            Ok(f) => f,
+            Err(_) => return Err(DecompressError::FileOpenError)
+        };
+        let mut file_reader = UniversalReader::new(input_file);
+
+
+        let huffman_tree = HuffmanTree::from_code(&mut file_reader)
+            .map_err(|_| DecompressError::BadFormat)?;
+        let dictionary = huffman_tree.get_bytes_encoding();
+
+
+        let padding_size =
+            ((file_reader.read_bit().ok_or(DecompressError::FileTooShort)? << 2) |
+            (file_reader.read_bit().ok_or(DecompressError::FileTooShort)? << 1) |
+            file_reader.read_bit().ok_or(DecompressError::FileTooShort)?)
+            as usize;
+
+
+        let decompressor = Decompressor
+        {
+            file_reader,
+            dictionary,
+            input_file_size,
+            padding_size,
+        };
+
+        Ok(decompressor)
+    }
+
+    fn get_byte_from_codeword(&self, potential_codeword: &BitVector) -> Option<u8>
+    {
+        for (byte, value) in &self.dictionary
+        {
+            if *value == *potential_codeword
+            {
+                return Some(*byte);
+            }
+        }
+
+        None
+    }
+
+    pub fn partial_decompress_to_memory(&mut self, bytes_to_get: usize)
+        -> Result<Vec<u8>, DecompressError>
+    {
+        let mut bytes = vec![];
+
+        let mut potential_codeword = BitVector::new();
+        while bytes.len() < bytes_to_get
+        {
+            let bit = self.file_reader.read_bit()
+                .ok_or(DecompressError::FileTooShort)?;
+
+            potential_codeword.push_bit(bit);
+            if let Some(byte) = self.get_byte_from_codeword(&potential_codeword)
+            {
+                bytes.push(byte);
+                potential_codeword.clear();
+            }
+        }
+
+        Ok(bytes)
+    }
+
+    pub fn decompress(&mut self, output_filename: &str) -> Result<(), DecompressError>
+    {
+        let bits_to_read_total = self.input_file_size - self.padding_size;
+
+        let mut output_writer = ByteWriter::new(output_filename)
+            .map_err(|_| DecompressError::Other)?;
+
+        let mut potential_codeword = BitVector::new();
+        while self.file_reader.bits_read() < bits_to_read_total
+        {
+            let bit = self.file_reader.read_bit()
+                .ok_or(DecompressError::FileTooShort)?;
+
+            potential_codeword.push_bit(bit);
+            if let Some(byte) = self.get_byte_from_codeword(&potential_codeword)
+            {
+                output_writer.write_byte(byte);
+                potential_codeword.clear();
+            }
+        }
+
+        Ok(())
+    }
+}
