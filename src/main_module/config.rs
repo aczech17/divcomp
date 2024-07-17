@@ -37,17 +37,17 @@ pub fn parse_arguments() -> Result<Config, String>
     {
         None =>
         {
-                if option == ConfigOption::Extract || option == ConfigOption::Display
-                {
-                    let ins = args[2..].to_vec();
-                    let outs = None;
+            if option == ConfigOption::Extract || option == ConfigOption::Display
+            {
+                let ins = args[2..].to_vec();
+                let outs = None;
 
-                    (ins, outs)
-                }
-                else
-                {
-                    return Err(String::from(usage));
-                }
+                (ins, outs)
+            }
+            else
+            {
+                return Err(String::from(usage));
+            }
         }
 
         Some(pos) =>

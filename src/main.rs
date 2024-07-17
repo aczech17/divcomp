@@ -1,9 +1,8 @@
 use main_module::archive_and_compress;
 use main_module::config::{ConfigOption, parse_arguments};
-use crate::compress_stage::decompress::DecompressError;
+
 use crate::main_module::extractor::Extractor;
 use crate::main_module::print_archive_info;
-//use crate::main_module
 
 mod main_module;
 mod compress_stage;
