@@ -1,45 +1,8 @@
-use std::fs::{File, OpenOptions};
-use std::io::{Read, Seek, SeekFrom, Write};
+use std::fs::File;
 
 use crate::compress_stage::huffman_tree::HuffmanTree;
-use crate::io_utils::bit_vector::Bit;
 use crate::io_utils::bit_vector_writer::BitVectorWriter;
 use crate::io_utils::universal_reader::UniversalReader;
-
-// fn write_bit_to_file(file: &mut File, bit: Bit, bit_position: usize)
-// {
-//     let byte_position = bit_position / 8;
-//     let position_in_bit = bit_position % 8;
-//
-//     file.seek(SeekFrom::Start(byte_position as u64))
-//         .unwrap();
-//
-//     let mut buffer = [0];
-//     file.read(&mut buffer)
-//         .unwrap();
-//
-//     buffer[0] |= bit << (7 - position_in_bit);
-//
-//     file.seek(SeekFrom::Start(byte_position as u64))
-//         .unwrap();
-//     file.write(&buffer)
-//         .unwrap();
-// }
-//
-// fn write_padding_size(output_filename: &str, padding_size: usize, padding_size_position: usize)
-// {
-//     let mut file = OpenOptions::new()
-//         .read(true)
-//         .append(false)
-//         .create(false)
-//         .write(true)
-//         .open(output_filename)
-//         .unwrap();
-//
-//     write_bit_to_file(&mut file, (padding_size >> 2) as Bit, padding_size_position);
-//     write_bit_to_file(&mut file, (padding_size >> 1) as Bit, padding_size_position + 1);
-//     write_bit_to_file(&mut file, padding_size as Bit, padding_size_position + 2);
-// }
 
 pub fn compress(input_filename: &str, output_filename: &str) -> Result<(), String>
 {
@@ -88,8 +51,6 @@ pub fn compress(input_filename: &str, output_filename: &str) -> Result<(), Strin
 
         file_writer.write_bit_vector(codeword);
     }
-
-    //let padding_size = (8 - file_writer.bits_in_buffer_count() % 8) % 8;
 
     Ok(())
 }

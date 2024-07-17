@@ -14,14 +14,11 @@ pub enum DecompressError
 }
 
 type Dictionary = HashMap<u8, BitVector>;
-type PaddingSize = usize;
 
 pub struct Decompressor
 {
     file_reader: UniversalReader,
     dictionary: Dictionary,
-    input_file_size: usize,
-    //padding_size: PaddingSize,
 }
 
 impl Decompressor
@@ -50,20 +47,10 @@ impl Decompressor
             .map_err(|_| DecompressError::BadFormat)?;
         let dictionary = huffman_tree.get_bytes_encoding();
 
-
-        // let padding_size =
-        //     ((file_reader.read_bit().ok_or(DecompressError::FileTooShort)? << 2) |
-        //     (file_reader.read_bit().ok_or(DecompressError::FileTooShort)? << 1) |
-        //     file_reader.read_bit().ok_or(DecompressError::FileTooShort)?)
-        //     as usize;
-
-
         let decompressor = Decompressor
         {
             file_reader,
             dictionary,
-            input_file_size,
-            //padding_size,
         };
 
         Ok(decompressor)
@@ -71,16 +58,11 @@ impl Decompressor
 
     fn get_byte_from_codeword(&self, potential_codeword: &BitVector) -> Option<u8>
     {
-        for (byte, value) in &self.dictionary
-        {
-            if *value == *potential_codeword
-            {
-                return Some(*byte);
-            }
-        }
-
-        None
+        self.dictionary.iter()
+            .find(|&(_, value)| value == potential_codeword)
+            .map(|(&byte, _)| byte)
     }
+
 
     pub fn partial_decompress_to_memory(&mut self, bytes_to_get: usize)
         -> Result<Vec<u8>, DecompressError>

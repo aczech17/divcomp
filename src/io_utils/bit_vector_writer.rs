@@ -54,11 +54,6 @@ impl BitVectorWriter
             self.write_bit(bit);
         }
     }
-
-    pub fn bits_in_buffer_count(&self) -> usize
-    {
-        self.buffer.size()
-    }
 }
 
 impl Drop for BitVectorWriter
