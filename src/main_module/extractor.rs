@@ -55,7 +55,8 @@ impl Extractor
         {
             match size
             {
-                None => create_dir(path).unwrap(),
+                None => create_dir(path)
+                    .map_err(|_| DecompressError::Other)?,
                 Some(size) => self.decompressor.decompress_some_bytes(&path, *size as usize)?,
             }
         }

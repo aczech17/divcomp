@@ -16,8 +16,8 @@ pub fn archive_and_compress(input_paths: Vec<String>, archive_filename: String) 
 
     let compress_result = compress(&tmp_file_name, &archive_filename);
 
-    fs::remove_file(tmp_file_name)
-        .unwrap();
+    fs::remove_file(&tmp_file_name)
+        .map_err(|_| format!("Could not remove the temporary file {}.", tmp_file_name))?;
 
     compress_result
 }

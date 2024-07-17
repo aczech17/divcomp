@@ -4,7 +4,7 @@ use std::path::Path;
 #[derive(Eq, PartialEq)]
 pub enum ConfigOption
 {
-    Archive, Extract,
+    Archive, Extract, Display,
 }
 
 pub struct Config
@@ -16,7 +16,7 @@ pub struct Config
 
 pub fn parse_arguments() -> Result<Config, String>
 {
-    let usage = "divcomp [-a|-e] [inputs] -o [output]";
+    let usage = "divcomp [-a| -e | -d] [inputs] -o [output]";
 
     let args: Vec<String> = args().collect();
 
@@ -29,6 +29,7 @@ pub fn parse_arguments() -> Result<Config, String>
     {
         "-a" => ConfigOption::Archive,
         "-e" => ConfigOption::Extract,
+        "-d" => ConfigOption::Display,
         _ => return Err(usage.to_string()),
     };
 
