@@ -1,5 +1,8 @@
 use std::env::args;
 use std::path::Path;
+use crate::compress_stage::decompress::DecompressError;
+use crate::main_module::{archive_and_compress, print_archive_info};
+use crate::main_module::extractor::Extractor;
 
 #[derive(Eq, PartialEq)]
 pub enum ConfigOption
@@ -7,16 +10,24 @@ pub enum ConfigOption
     Archive, Extract, Display,
 }
 
-pub struct Config
+pub struct ProgramConfig
 {
     pub input_filenames: Vec<String>,
     pub output_archive_filename: Option<String>,
     pub option: ConfigOption,
 }
 
-pub fn parse_arguments() -> Result<Config, String>
+pub fn parse_arguments() -> Result<ProgramConfig, String>
 {
-    let usage = "divcomp [-a| -e | -d] [inputs] -o [output]";
+    //let usage = "divcomp [-a| -e | -d] [inputs] -o [output]";
+    let usage = "\
+    1. Spakowanie plików:\n\
+    \t./divcomp -a [nazwy plików] -o [wybrana nazwa archiwum]\n\n\
+    2. Wypakowanie archiwum\n\
+    \t./divcomp -e [nazwa archiwum]\n\n\
+    3. Podejrzenie archiwum\n\
+    \t./divcomp -d [nazwa archiwum]\n\
+    ";
 
     let args: Vec<String> = args().collect();
 
@@ -75,7 +86,7 @@ pub fn parse_arguments() -> Result<Config, String>
         _ => {}, // ???
     };
 
-    let config = Config
+    let config = ProgramConfig
     {
         input_filenames: inputs,
         output_archive_filename: output,
@@ -83,4 +94,41 @@ pub fn parse_arguments() -> Result<Config, String>
     };
 
     Ok(config)
+}
+
+fn decompress_error_to_string(error: DecompressError) -> String
+{
+    match error
+    {
+        DecompressError::BadFormat | DecompressError::FileTooShort | DecompressError::EmptyFile =>
+            "Invalid archive.",
+        DecompressError::FileOpenError => "Could not open the file.",
+        DecompressError::Other => "Error while decompressing.",
+    }.to_string()
+}
+
+pub fn execute(program_config: ProgramConfig) -> Result<(), String>
+{
+    if program_config.option == ConfigOption::Archive
+    {
+        return archive_and_compress
+            (program_config.input_filenames, program_config.output_archive_filename.unwrap());
+    }
+
+    let archive_filename = program_config.input_filenames[0].clone();
+    let mut extractor = Extractor::new(archive_filename)
+        .map_err(|err| decompress_error_to_string(err))?;
+
+    match program_config.option
+    {
+        ConfigOption::Extract => extractor.extract()
+            .map_err(|err| decompress_error_to_string(err)),
+        ConfigOption::Display =>
+        {
+            print_archive_info(&extractor);
+            Ok(())
+        }
+
+        _ => Ok(()),
+    }
 }

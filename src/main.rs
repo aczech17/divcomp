@@ -1,8 +1,6 @@
-use main_module::archive_and_compress;
-use main_module::config::{ConfigOption, parse_arguments};
+use main_module::config::parse_arguments;
 
-use crate::main_module::extractor::Extractor;
-use crate::main_module::print_archive_info;
+use crate::main_module::config::execute;
 
 mod main_module;
 mod compress_stage;
@@ -21,45 +19,10 @@ fn main()
         }
     };
 
-    if config.option == ConfigOption::Archive
+    let execution_status = execute(config);
+    if let Err(err_msg) = execution_status
     {
-        match archive_and_compress(config.input_filenames, config.output_archive_filename.unwrap())
-        {
-            Ok(_) => return,
-            Err(err) =>
-            {
-                eprintln!("{}", err);
-                return;
-            }
-        }
-    }
-
-    let archive_filename = config.input_filenames[0].clone();
-    let mut extractor = match Extractor::new(archive_filename)
-    {
-        Ok(e) => e,
-        Err(err) =>
-            {
-                eprintln!("{:?}", err);
-                return;
-            }
-    };
-
-    let result = match config.option
-    {
-        ConfigOption::Extract => extractor.extract(),
-        ConfigOption::Display =>
-        {
-            print_archive_info(&extractor);
-            return;
-        }
-
-        _ => Ok(()),
-    };
-
-    if let Err(err) = result
-    {
-        eprintln!("{:?}", err);
+        eprintln!("{}", err_msg);
     }
 }
 

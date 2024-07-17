@@ -26,6 +26,11 @@ pub fn print_archive_info(extractor: &Extractor)
 {
     for (path, size) in extractor.get_archive_info()
     {
-        println!("{} - {:?}", path, size);
+        print!("{} ", path);
+        match size
+        {
+            Some(s) => println!("{} B", s),
+            None => println!("directory"),
+        }
     }
 }
