@@ -7,6 +7,7 @@ use crate::compress_stage::huffman_tree::HuffmanTree;
 use crate::compress_stage::universal_reader::UniversalReader;
 use crate::io_utils::bit_vector::BitVector;
 
+#[derive(Debug)]
 pub enum DecompressError
 {
     EmptyFile, BadFormat, FileTooShort, FileOpenError, Other,
@@ -20,7 +21,7 @@ pub struct Decompressor
     file_reader: UniversalReader,
     dictionary: Dictionary,
     input_file_size: usize,
-    padding_size: PaddingSize,
+    //padding_size: PaddingSize,
 }
 
 impl Decompressor
@@ -50,11 +51,11 @@ impl Decompressor
         let dictionary = huffman_tree.get_bytes_encoding();
 
 
-        let padding_size =
-            ((file_reader.read_bit().ok_or(DecompressError::FileTooShort)? << 2) |
-            (file_reader.read_bit().ok_or(DecompressError::FileTooShort)? << 1) |
-            file_reader.read_bit().ok_or(DecompressError::FileTooShort)?)
-            as usize;
+        // let padding_size =
+        //     ((file_reader.read_bit().ok_or(DecompressError::FileTooShort)? << 2) |
+        //     (file_reader.read_bit().ok_or(DecompressError::FileTooShort)? << 1) |
+        //     file_reader.read_bit().ok_or(DecompressError::FileTooShort)?)
+        //     as usize;
 
 
         let decompressor = Decompressor
@@ -62,7 +63,7 @@ impl Decompressor
             file_reader,
             dictionary,
             input_file_size,
-            padding_size,
+            //padding_size,
         };
 
         Ok(decompressor)
@@ -103,15 +104,16 @@ impl Decompressor
         Ok(bytes)
     }
 
-    pub fn decompress(&mut self, output_filename: &str) -> Result<(), DecompressError>
+    pub fn decompress_some_bytes(&mut self, output_filename: &str, count: usize)
+        -> Result<(), DecompressError>
     {
-        let bits_to_read_total = self.input_file_size - self.padding_size;
+        let mut bytes_decompressed = 0;
 
         let mut output_writer = ByteWriter::new(output_filename)
             .map_err(|_| DecompressError::Other)?;
 
         let mut potential_codeword = BitVector::new();
-        while self.file_reader.bits_read() < bits_to_read_total
+        while bytes_decompressed < count
         {
             let bit = self.file_reader.read_bit()
                 .ok_or(DecompressError::FileTooShort)?;
@@ -120,6 +122,7 @@ impl Decompressor
             if let Some(byte) = self.get_byte_from_codeword(&potential_codeword)
             {
                 output_writer.write_byte(byte);
+                bytes_decompressed += 1;
                 potential_codeword.clear();
             }
         }

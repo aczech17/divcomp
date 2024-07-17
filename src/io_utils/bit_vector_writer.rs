@@ -29,7 +29,7 @@ impl BitVectorWriter
         Some(file_writer)
     }
 
-    pub fn dump_buffer(&mut self)
+    fn flush(&mut self)
     {
         let data = self.buffer.get_data();
         self.file_handle.write_all(data).unwrap();
@@ -42,7 +42,7 @@ impl BitVectorWriter
 
         if self.buffer.size() == BUFFER_SIZE
         {
-            self.dump_buffer();
+            self.flush();
         }
     }
 
@@ -58,5 +58,13 @@ impl BitVectorWriter
     pub fn bits_in_buffer_count(&self) -> usize
     {
         self.buffer.size()
+    }
+}
+
+impl Drop for BitVectorWriter
+{
+    fn drop(&mut self)
+    {
+        self.flush();
     }
 }

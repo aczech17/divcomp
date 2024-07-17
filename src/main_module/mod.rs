@@ -1,16 +1,17 @@
-pub mod config;
-
 use std::fs;
+use std::fs::create_dir;
 use std::path::Path;
+
 use rand::Rng;
 
-use crate::compress_stage::compress::compress;
 use crate::archive_stage::archive::archive;
-use crate::archive_stage::extract::extract;
 use crate::archive_stage::directory_info::DirectoryInfo;
+use crate::compress_stage::compress::compress;
 use crate::compress_stage::decompress::{DecompressError, Decompressor};
 use crate::io_utils::byte_buffer::ByteBuffer;
 use crate::io_utils::bytes_to_u64;
+
+pub mod config;
 
 fn get_tmp_file_name() -> Result<String, ()>
 {
@@ -49,7 +50,7 @@ pub fn archive_and_compress(input_paths: Vec<String>, archive_filename: String) 
     compress_result
 }
 
-struct Extractor
+pub struct Extractor
 {
     decompressor: Decompressor,
     archive_info: Vec<(String, Option<u64>)>,
@@ -93,6 +94,19 @@ impl Extractor
     {
         &self.archive_info
     }
-}
 
+    pub fn extract(&mut self) -> Result<(), DecompressError>
+    {
+        for (path, size) in &self.archive_info
+        {
+            match size
+            {
+                None => create_dir(path).unwrap(),
+                Some(size) => self.decompressor.decompress_some_bytes(&path, *size as usize)?,
+            }
+        }
+
+        Ok(())
+    }
+}
 
