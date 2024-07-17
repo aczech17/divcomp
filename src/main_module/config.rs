@@ -37,7 +37,7 @@ pub fn parse_arguments() -> Result<Config, String>
     {
         None =>
         {
-                if option == ConfigOption::Extract
+                if option == ConfigOption::Extract || option == ConfigOption::Display
                 {
                     let ins = args[2..].to_vec();
                     let outs = None;
