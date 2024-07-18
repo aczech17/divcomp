@@ -1,4 +1,6 @@
 use std::fs::create_dir;
+use std::io;
+use std::io::Write;
 use std::path::Path;
 use crate::archive_stage::directory_info::DirectoryInfo;
 use crate::compress_stage::decompress::{DecompressError, Decompressor};
@@ -56,16 +58,20 @@ impl Extractor
         {
             if Path::new(path).exists()
             {
-                println!("{} already exists, skipping.", path);
+                print!("{} already exists, skipping...", path);
+                io::stdout().flush().unwrap();
 
                 if let Some(bytes_count) = size
                 {
                     self.decompressor.ignore(*bytes_count as usize)?;
                 }
+                println!();
                 continue;
             }
 
             print!("{}... ", path);
+            io::stdout().flush().unwrap();
+
             match size
             {
                 None => create_dir(path).map_err(|_| DecompressError::Other)?,
