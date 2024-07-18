@@ -64,10 +64,10 @@ impl Decompressor
     }
 
 
-    pub fn partial_decompress_to_memory(&mut self, bytes_to_get: usize)
+    pub fn decompress_bytes_to_memory(&mut self, bytes_to_get: usize)
         -> Result<Vec<u8>, DecompressError>
     {
-        let mut bytes = vec![];
+        let mut bytes = Vec::with_capacity(bytes_to_get);
 
         let mut potential_codeword = BitVector::new();
         while bytes.len() < bytes_to_get
@@ -86,7 +86,7 @@ impl Decompressor
         Ok(bytes)
     }
 
-    pub fn decompress_some_bytes(&mut self, output_filename: &str, count: usize)
+    pub fn decompress_bytes_to_file(&mut self, output_filename: &str, count: usize)
         -> Result<(), DecompressError>
     {
         let mut bytes_decompressed = 0;
