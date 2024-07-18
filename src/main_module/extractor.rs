@@ -56,7 +56,8 @@ impl Extractor
         {
             if Path::new(path).exists()
             {
-                eprintln!("{} already exists. Skipping.", path);
+                println!("{} already exists, skipping.", path);
+
                 if let Some(bytes_count) = size
                 {
                     self.decompressor.ignore(*bytes_count as usize)?;
@@ -64,12 +65,15 @@ impl Extractor
                 continue;
             }
 
+            print!("{}... ", path);
             match size
             {
                 None => create_dir(path).map_err(|_| DecompressError::Other)?,
                 Some(size) =>
                     self.decompressor.decompress_bytes_to_file(&path, *size as usize)?,
             }
+
+            println!("extracted.");
         }
 
         Ok(())
