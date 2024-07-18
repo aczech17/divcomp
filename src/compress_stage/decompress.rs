@@ -111,4 +111,24 @@ impl Decompressor
 
         Ok(())
     }
+
+    pub fn ignore(&mut self, bytes_count: usize) -> Result<(), DecompressError>
+    {
+        let mut bytes_decompressed = 0;
+        let mut potential_codeword = BitVector::new();
+        while bytes_decompressed < bytes_count
+        {
+            let bit = self.file_reader.read_bit()
+                .ok_or(DecompressError::FileTooShort)?;
+
+            potential_codeword.push_bit(bit);
+            if let Some(_byte) = self.get_byte_from_codeword(&potential_codeword)
+            {
+                bytes_decompressed += 1;
+                potential_codeword.clear();
+            }
+        }
+
+        Ok(())
+    }
 }

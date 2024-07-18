@@ -59,8 +59,7 @@ impl Extractor
                 eprintln!("{} already exists. Skipping.", path);
                 if let Some(bytes_count) = size
                 {
-                    let _ignored_bytes =
-                        self.decompressor.decompress_bytes_to_memory(*bytes_count as usize)?;
+                    self.decompressor.ignore(*bytes_count as usize)?;
                 }
                 continue;
             }
