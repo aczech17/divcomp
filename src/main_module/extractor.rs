@@ -1,4 +1,5 @@
 use std::fs::create_dir;
+use std::path::Path;
 use crate::archive_stage::directory_info::DirectoryInfo;
 use crate::compress_stage::decompress::{DecompressError, Decompressor};
 use crate::io_utils::byte_buffer::ByteBuffer;
@@ -17,9 +18,9 @@ impl Extractor
         let mut decompressor = Decompressor::new(&archive_filename)?;
 
         let header_size =
-            bytes_to_u64(decompressor.partial_decompress_to_memory(8)?);
+            bytes_to_u64(decompressor.decompress_bytes_to_memory(8)?);
 
-        let header_data = decompressor.partial_decompress_to_memory(header_size as usize)?;
+        let header_data = decompressor.decompress_bytes_to_memory(header_size as usize)?;
         let mut header_data = ByteBuffer::new(header_data);
 
         let mut directory_infos = vec![];
@@ -53,11 +54,22 @@ impl Extractor
     {
         for (path, size) in &self.archive_info
         {
+            if Path::new(path).exists()
+            {
+                eprintln!("{} already exists. Skipping.", path);
+                if let Some(bytes_count) = size
+                {
+                    let _ignored_bytes =
+                        self.decompressor.decompress_bytes_to_memory(*bytes_count as usize)?;
+                }
+                continue;
+            }
+
             match size
             {
-                None => create_dir(path)
-                    .map_err(|_| DecompressError::Other)?,
-                Some(size) => self.decompressor.decompress_some_bytes(&path, *size as usize)?,
+                None => create_dir(path).map_err(|_| DecompressError::Other)?,
+                Some(size) =>
+                    self.decompressor.decompress_bytes_to_file(&path, *size as usize)?,
             }
         }
 
