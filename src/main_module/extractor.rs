@@ -54,13 +54,17 @@ impl Extractor
         &self.archive_info
     }
 
-    pub fn extract_all(&mut self) -> Result<(), DecompressError>
+    pub fn extract_all(&mut self, output_directory: String) -> Result<(), DecompressError>
     {
+        fs::create_dir_all(&output_directory)
+            .map_err(|_| DecompressError::Other)?;
+
         for (path, size) in &self.archive_info
         {
-            if Path::new(path).exists()
+            let output_path = format!("{}/{}", output_directory, path);
+            if Path::new(&output_path).exists()
             {
-                print!("{} already exists, skipping...", path);
+                print!("{} already exists, skipping...", output_path);
                 io::stdout().flush().unwrap();
 
                 if let Some(bytes_count) = size
@@ -76,9 +80,9 @@ impl Extractor
 
             match size
             {
-                None => create_dir(path).map_err(|_| DecompressError::Other)?,
+                None => create_dir(output_path).map_err(|_| DecompressError::Other)?,
                 Some(size) =>
-                    self.decompressor.decompress_bytes_to_file(&path, *size as usize)?,
+                    self.decompressor.decompress_bytes_to_file(&output_path, *size as usize)?,
             }
 
             println!("extracted.");
@@ -87,8 +91,12 @@ impl Extractor
         Ok(())
     }
 
-    pub fn extract_path(&mut self, path_to_extract: String) -> Result<(), DecompressError>
+    pub fn extract_path(&mut self, path_to_extract: String, output_directory: String)
+        -> Result<(), DecompressError>
     {
+        fs::create_dir_all(&output_directory)
+            .map_err(|_| DecompressError::Other)?;
+
         // Skip paths that are not subdirectories of the path to be extracted.
         let mut skipped_count = 0;
         for (path, size) in &self.archive_info
@@ -113,9 +121,14 @@ impl Extractor
                 break;
             }
 
-            let path_to_extract = path.strip_prefix(&superpath)
+            let path_stripped = path.strip_prefix(&superpath)
                 .expect("Bad path trimming.")
                 .to_string();
+            let path_to_extract = match output_directory.as_str()
+            {
+                "" => path_stripped,
+                directory => format!("{}/{}", directory, path_stripped),
+            };
 
             if Path::new(&path_to_extract).exists()
             {
