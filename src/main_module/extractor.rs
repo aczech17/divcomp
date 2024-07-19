@@ -87,9 +87,16 @@ impl Extractor
 
     fn is_a_subdirectory(superpath: &str, subpath: &str) -> bool
     {
-        let superdirectories: Vec<&str> = superpath.split("/")
+        // First define the slash kind in the OS.
+        let slash = match superpath.find("/")
+        {
+            Some(_) => "/",
+            None => "\\",
+        };
+
+        let superdirectories: Vec<&str> = superpath.split(slash)
             .collect();
-        let subdirectories: Vec<&str> = subpath.split("/")
+        let subdirectories: Vec<&str> = subpath.split(slash)
             .collect();
 
         if superdirectories.len() > subdirectories.len()
