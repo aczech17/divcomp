@@ -2,10 +2,12 @@ use std::fs::create_dir;
 use std::io;
 use std::io::Write;
 use std::path::Path;
+
 use crate::archive_stage::directory_info::DirectoryInfo;
 use crate::compress_stage::decompress::{DecompressError, Decompressor};
 use crate::io_utils::byte_buffer::ByteBuffer;
 use crate::io_utils::bytes_to_u64;
+use crate::io_utils::path_utils::{get_superpath, is_a_subdirectory};
 
 pub struct Extractor
 {
@@ -85,71 +87,42 @@ impl Extractor
         Ok(())
     }
 
-    fn is_a_subdirectory(superpath: &str, subpath: &str) -> bool
-    {
-        // First define the slash kind in the OS.
-        let slash = match superpath.find("/")
-        {
-            Some(_) => "/",
-            None => "\\",
-        };
-
-        let superdirectories: Vec<&str> = superpath.split(slash)
-            .collect();
-        let subdirectories: Vec<&str> = subpath.split(slash)
-            .collect();
-
-        if superdirectories.len() > subdirectories.len()
-        {
-            return false;
-        }
-
-        for (i, elem) in superdirectories.iter().enumerate()
-        {
-            if &subdirectories[i] != elem
-            {
-                return false;
-            }
-        }
-        true
-    }
-
     pub fn extract_path(&mut self, path_to_extract: String) -> Result<(), DecompressError>
     {
-        let mut path_reached = false;
-
+        // Skip paths that are not subdirectories of the path to be extracted.
+        let mut skipped_count = 0;
         for (path, size) in &self.archive_info
         {
-            let is_subdirectory = Self::is_a_subdirectory(&path_to_extract, path);
-            if !is_subdirectory && !path_reached
+            if !is_a_subdirectory(&path_to_extract, path)
             {
-                // It's not this yet.
-
-                // If it's not a directory, read the file content and ignore it.
                 if let Some(bytes) = size
                 {
                     self.decompressor.ignore(*bytes as usize)?;
                 }
-
-                continue;
+                skipped_count += 1;
             }
+        }
 
-            if !is_subdirectory && path_reached
+        let superpath = get_superpath(&path_to_extract);
+
+        let info = self.archive_info.iter().skip(skipped_count);
+        for (path, size) in info
+        {
+            if is_a_subdirectory(&path_to_extract, path)
             {
-                // What had to be extracted, was extracted. It's finished.
                 break;
             }
 
-            if is_subdirectory
-            {
-                path_reached = true;
+            let path_to_extract = path.strip_prefix(&superpath)
+                .expect("Bad path trimming.")
+                .to_string();
 
-                match size
-                {
-                    None => create_dir(path).map_err(|_| DecompressError::Other)?,
-                    Some(size) =>
-                        self.decompressor.decompress_bytes_to_file(&path, *size as usize)?,
-                }
+            match size
+            {
+                Some(bytes) =>
+                    self.decompressor.decompress_bytes_to_file(&path_to_extract, *bytes as usize)?,
+                None => create_dir(&path_to_extract)
+                    .map_err(|_| DecompressError::Other)?,
             }
         }
 
