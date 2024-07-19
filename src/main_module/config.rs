@@ -22,17 +22,23 @@ pub struct ProgramConfig
 
 pub fn parse_arguments() -> Result<ProgramConfig, String>
 {
-    let usage = "\
-    1. Spakowanie plików:\n\
-    \t./divcomp -a [nazwy plików] -o [wybrana nazwa archiwum]\n\n\
-    2. Wypakowanie archiwum\n\
-    \t./divcomp -e [nazwa archiwum]\n\n\
-    3. Wypakowanie cz
-    3. Podejrzenie archiwum\n\
-    \t./divcomp -d [nazwa archiwum]\n\
-    ";
-
     let args: Vec<String> = args().collect();
+
+    let program_name = args[0].clone();
+
+    let usage = format!("\
+    1. Spakowanie plików:\n\
+    \t{} -a [nazwy plików] -o [wybrana nazwa archiwum]\n\n\
+    2. Wypakowanie archiwum\n\
+    \t{} -ea [nazwa archiwum]\n\n\
+    3. Wypakowanie części archiwum\n\
+    \t{} -ep [nazwa archiwum] -o [ścieżka do wypakowania]\n\n\
+    4. Podejrzenie archiwum\n\
+    \t{} -d [nazwa archiwum]\n\
+    ",
+    program_name, program_name, program_name, program_name);
+
+
 
     if args.len() < 3
     {
