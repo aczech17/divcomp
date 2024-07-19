@@ -52,7 +52,7 @@ impl Extractor
         &self.archive_info
     }
 
-    pub fn extract(&mut self) -> Result<(), DecompressError>
+    pub fn extract_all(&mut self) -> Result<(), DecompressError>
     {
         for (path, size) in &self.archive_info
         {
@@ -80,6 +80,70 @@ impl Extractor
             }
 
             println!("extracted.");
+        }
+
+        Ok(())
+    }
+
+    fn is_a_subdirectory(superpath: &str, subpath: &str) -> bool
+    {
+        let superdirectories: Vec<&str> = superpath.split("/")
+            .collect();
+        let subdirectories: Vec<&str> = subpath.split("/")
+            .collect();
+
+        if superdirectories.len() > subdirectories.len()
+        {
+            return false;
+        }
+
+        for (i, elem) in superdirectories.iter().enumerate()
+        {
+            if &subdirectories[i] != elem
+            {
+                return false;
+            }
+        }
+        true
+    }
+
+    pub fn extract_path(&mut self, path_to_extract: String) -> Result<(), DecompressError>
+    {
+        let mut path_reached = false;
+
+        for (path, size) in &self.archive_info
+        {
+            let is_subdirectory = Self::is_a_subdirectory(&path_to_extract, path);
+            if !is_subdirectory && !path_reached
+            {
+                // It's not this yet.
+
+                // If it's not a directory, read the file content and ignore it.
+                if let Some(bytes) = size
+                {
+                    self.decompressor.ignore(*bytes as usize)?;
+                }
+
+                continue;
+            }
+
+            if !is_subdirectory && path_reached
+            {
+                // What had to be extracted, was extracted. It's finished.
+                break;
+            }
+
+            if is_subdirectory
+            {
+                path_reached = true;
+
+                match size
+                {
+                    None => create_dir(path).map_err(|_| DecompressError::Other)?,
+                    Some(size) =>
+                        self.decompressor.decompress_bytes_to_file(&path, *size as usize)?,
+                }
+            }
         }
 
         Ok(())
