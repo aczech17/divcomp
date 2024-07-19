@@ -108,7 +108,7 @@ impl Extractor
         let info = self.archive_info.iter().skip(skipped_count);
         for (path, size) in info
         {
-            if is_a_subdirectory(&path_to_extract, path)
+            if !is_a_subdirectory(&path_to_extract, path)
             {
                 break;
             }
