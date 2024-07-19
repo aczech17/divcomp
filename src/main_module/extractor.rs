@@ -140,7 +140,7 @@ impl Extractor
             {
                 Some(bytes) =>
                     self.decompressor.decompress_bytes_to_file(&path_to_extract, *bytes as usize)?,
-                None => fs::create_dir(&path_to_extract)
+                None => create_dir(&path_to_extract)
                     .map_err(|_| DecompressError::Other)?,
             };
         }
