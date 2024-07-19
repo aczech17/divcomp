@@ -1,5 +1,5 @@
 use std::fs::create_dir;
-use std::io;
+use std::{fs, io};
 use std::io::Write;
 use std::path::Path;
 
@@ -7,7 +7,7 @@ use crate::archive_stage::directory_info::DirectoryInfo;
 use crate::compress_stage::decompress::{DecompressError, Decompressor};
 use crate::io_utils::byte_buffer::ByteBuffer;
 use crate::io_utils::bytes_to_u64;
-use crate::io_utils::path_utils::{create_directory_if_nonexistent, get_superpath, is_a_subdirectory};
+use crate::io_utils::path_utils::{get_superpath, is_a_subdirectory};
 
 pub struct Extractor
 {
@@ -117,11 +117,17 @@ impl Extractor
                 .expect("Bad path trimming.")
                 .to_string();
 
+            if Path::new(&path_to_extract).exists()
+            {
+                println!("Path {} exists. Skipping.", path_to_extract);
+                continue;
+            }
+
             match size
             {
                 Some(bytes) =>
                     self.decompressor.decompress_bytes_to_file(&path_to_extract, *bytes as usize)?,
-                None => create_directory_if_nonexistent(&path_to_extract)
+                None => fs::create_dir(&path_to_extract)
                     .map_err(|_| DecompressError::Other)?,
             };
         }

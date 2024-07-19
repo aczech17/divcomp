@@ -45,6 +45,7 @@ impl DirectoryInfo
         for entry in WalkDir::new(directory_path)
         {
             let path = entry.unwrap().path().to_str().unwrap().to_string();
+            let path = path.replace("\\", "/");
             let entry_info = FilesystemEntryInfo::new(&path);
             entry_infos.push(entry_info);
         }

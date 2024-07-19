@@ -1,18 +1,8 @@
-use std::fs;
-use std::path::Path;
-
-#[cfg(target_os = "windows")]
-pub const SLASH: &str = "\\";
-
-#[cfg(not(target_os = "windows"))]
-pub const SLASH: &str = "/";
-
-
 pub fn is_a_subdirectory(superpath: &str, subpath: &str) -> bool
 {
-    let superdirectories: Vec<&str> = superpath.split(SLASH)
+    let superdirectories: Vec<&str> = superpath.split("/")
         .collect();
-    let subdirectories: Vec<&str> = subpath.split(SLASH)
+    let subdirectories: Vec<&str> = subpath.split("/")
         .collect();
 
     if superdirectories.len() > subdirectories.len()
@@ -32,22 +22,10 @@ pub fn is_a_subdirectory(superpath: &str, subpath: &str) -> bool
 
 pub fn get_superpath(path: &str) -> String
 {
-    match path.rfind(SLASH)
+    match path.rfind("/")
     {
         Some(pos) => path[..pos + 1].to_string(),
         None => String::new(),
     }
 }
 
-pub fn create_directory_if_nonexistent(path: &str) -> Result<(), ()>
-{
-    if Path::new(path).exists()
-    {
-        return Ok(())
-    }
-
-    fs::create_dir(path)
-        .map_err(|_| ())?;
-
-    Ok(())
-}

@@ -80,6 +80,16 @@ pub fn parse_arguments() -> Result<ProgramConfig, String>
         }
     };
 
+    let inputs = inputs.iter()
+        .map(|input| input.replace("\\", "/"))
+        .collect();
+
+    let output = match output
+    {
+        Some(out) => Some(out.replace("\\", "/")),
+        None => None,
+    };
+
     for input in &inputs
     {
         if !Path::new(input).exists()
