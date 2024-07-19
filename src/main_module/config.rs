@@ -88,14 +88,6 @@ pub fn parse_arguments() -> Result<ProgramConfig, String>
         }
     }
 
-    match &output
-    {
-        Some(name) if Path::new(name).exists() =>
-            return Err(format!("Path {} already exists.", name)),
-        None => {},
-        _ => {}, // ???
-    };
-
     let config = ProgramConfig
     {
         input_filenames: inputs,
