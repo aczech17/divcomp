@@ -1,3 +1,6 @@
+use std::fs;
+use std::path::Path;
+
 #[cfg(target_os = "windows")]
 pub const SLASH: &str = "\\";
 
@@ -34,4 +37,17 @@ pub fn get_superpath(path: &str) -> String
         Some(pos) => path[..pos + 1].to_string(),
         None => String::new(),
     }
+}
+
+pub fn create_directory_if_nonexistent(path: &str) -> Result<(), ()>
+{
+    if Path::new(path).exists()
+    {
+        return Ok(())
+    }
+
+    fs::create_dir(path)
+        .map_err(|_| ())?;
+
+    Ok(())
 }
