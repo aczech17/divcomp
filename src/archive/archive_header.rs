@@ -1,4 +1,4 @@
-use crate::archive_stage::directory_info::DirectoryInfo;
+use crate::archive::directory_info::DirectoryInfo;
 
 pub struct ArchiveHeader
 {

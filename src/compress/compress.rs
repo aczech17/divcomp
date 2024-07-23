@@ -1,6 +1,6 @@
 use std::fs::File;
 
-use crate::compress_stage::huffman_tree::HuffmanTree;
+use crate::compress::huffman_tree::HuffmanTree;
 use crate::io_utils::bit_vector_writer::BitVectorWriter;
 use crate::io_utils::universal_reader::UniversalReader;
 

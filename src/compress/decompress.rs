@@ -2,9 +2,9 @@ use std::collections::HashMap;
 use std::fs;
 use std::fs::File;
 
-use crate::compress_stage::byte_writer::ByteWriter;
-use crate::compress_stage::huffman_tree::HuffmanTree;
-use crate::compress_stage::universal_reader::UniversalReader;
+use crate::compress::byte_writer::ByteWriter;
+use crate::compress::huffman_tree::HuffmanTree;
+use crate::compress::universal_reader::UniversalReader;
 use crate::io_utils::bit_vector::BitVector;
 
 #[derive(Debug)]

@@ -1,7 +1,7 @@
 use std::fs;
 use std::fs::File;
-use crate::archive_stage::archive_header::ArchiveHeader;
-use crate::archive_stage::directory_info::DirectoryInfo;
+use crate::archive::archive_header::ArchiveHeader;
+use crate::archive::directory_info::DirectoryInfo;
 use crate::io_utils::byte_writer::ByteWriter;
 use crate::io_utils::universal_reader::UniversalReader;
 

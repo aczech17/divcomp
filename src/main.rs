@@ -3,8 +3,8 @@ use main_module::config::parse_arguments;
 use crate::main_module::config::execute;
 
 mod main_module;
-mod compress_stage;
-mod archive_stage;
+mod compress;
+mod archive;
 mod io_utils;
 
 fn main()

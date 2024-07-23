@@ -3,8 +3,8 @@ use std::{fs, io};
 use std::io::Write;
 use std::path::Path;
 
-use crate::archive_stage::directory_info::DirectoryInfo;
-use crate::compress_stage::decompress::{DecompressError, Decompressor};
+use crate::archive::directory_info::DirectoryInfo;
+use crate::compress::decompress::{DecompressError, Decompressor};
 use crate::io_utils::byte_buffer::ByteBuffer;
 use crate::io_utils::bytes_to_u64;
 use crate::io_utils::path_utils::{get_superpath, is_a_subdirectory};

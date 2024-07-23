@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap};
 use std::fs::File;
-use crate::compress_stage::universal_reader::UniversalReader;
+use crate::compress::universal_reader::UniversalReader;
 use crate::io_utils::bit_vector::BitVector;
 
 #[derive(Clone, Eq, PartialEq)]

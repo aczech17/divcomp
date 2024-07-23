@@ -1,12 +1,11 @@
 use std::fs;
 
-use crate::archive_stage::archive::archive;
-use crate::compress_stage::compress::compress;
+use crate::archive::archive::archive;
+use crate::compress::compress::compress;
 use crate::io_utils::get_tmp_file_name;
-use crate::main_module::extractor::Extractor;
+use crate::archive::extractor::Extractor;
 
 pub mod config;
-pub mod extractor;
 
 pub fn archive_and_compress(input_paths: Vec<String>, archive_filename: String) -> Result<(), String>
 {

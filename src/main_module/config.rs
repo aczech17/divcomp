@@ -1,10 +1,10 @@
 use std::env;
 use std::env::args;
 
-use crate::compress_stage::decompress::DecompressError;
+use crate::compress::decompress::DecompressError;
 use crate::io_utils::path_utils::get_superpath;
 use crate::main_module::{archive_and_compress, print_archive_info};
-use crate::main_module::extractor::Extractor;
+use crate::archive::extractor::Extractor;
 
 #[derive(Eq, PartialEq)]
 pub enum ConfigOption
