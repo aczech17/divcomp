@@ -19,8 +19,8 @@ fn main()
         }
     };
 
-    let execution_status = execute(config);
-    if let Err(err_msg) = execution_status
+
+    if let Err(err_msg) = execute(config)
     {
         eprintln!("{}", err_msg);
     }

@@ -1,5 +1,5 @@
-use std::fs::create_dir;
-use std::{fs, io};
+use std::fs::{create_dir, create_dir_all};
+use std::io;
 use std::io::Write;
 use std::path::Path;
 
@@ -56,12 +56,17 @@ impl Extractor
 
     pub fn extract_all(&mut self, output_directory: String) -> Result<(), DecompressError>
     {
-        fs::create_dir_all(&output_directory)
+        create_dir_all(&output_directory)
             .map_err(|_| DecompressError::Other)?;
 
         for (path, size) in &self.archive_info
         {
-            let output_path = format!("{}/{}", output_directory, path);
+            let output_path = match output_directory.as_str()
+            {
+                "" => path.to_string(),
+                directory => format!("{}/{}", directory, path),
+            };
+
             if Path::new(&output_path).exists()
             {
                 print!("{} already exists, skipping...", output_path);
@@ -91,58 +96,58 @@ impl Extractor
         Ok(())
     }
 
-    pub fn extract_path(&mut self, path_to_extract: String, output_directory: String)
+    pub fn extract_paths(&mut self, paths_to_extract: Vec<String>, output_directory: String)
         -> Result<(), DecompressError>
     {
-        fs::create_dir_all(&output_directory)
+        create_dir_all(&output_directory)
             .map_err(|_| DecompressError::Other)?;
 
-        // Skip paths that are not subdirectories of the path to be extracted.
-        let mut skipped_count = 0;
         for (path, size) in &self.archive_info
         {
-            if !is_a_subdirectory(&path_to_extract, path)
+            // Check if this path is a subdirectory of some given path to be extracted.
+            match paths_to_extract.iter()
+                .find(|&path_to_extract| is_a_subdirectory(path_to_extract, &path))
             {
-                if let Some(bytes) = size
+                None => // This path is not to be extracted. Ignore and continue.
                 {
-                    self.decompressor.ignore(*bytes as usize)?;
+                    if let Some(bytes) = size
+                    {
+                        self.decompressor.ignore(*bytes as usize)?;
+                    }
+                    continue;
                 }
-                skipped_count += 1;
+
+                Some(path_to_extract) => // This path is a path to be extracted.
+                {
+                    let superpath_to_be_stripped = get_superpath(&path_to_extract);
+
+                    let path_stripped = path.strip_prefix(&superpath_to_be_stripped)
+                        .expect("Bad path stripping.")
+                        .to_string();
+                    let output_path = match output_directory.as_str()
+                    {
+                        "" => path_stripped,    // this folder
+                        directory => format!("{}/{}", directory, path_stripped),
+                    };
+
+                    if Path::new(&output_path).exists()
+                    {
+                        println!("Path {} exists. Skipping.", path_to_extract);
+                        io::stdout().flush().unwrap();
+
+                        continue;
+                    }
+
+                    match size
+                    {
+                        None => create_dir(&output_path)    // directory
+                            .map_err(|_| DecompressError::Other)?,
+
+                        Some(bytes) =>                     // regular file
+                            self.decompressor.decompress_bytes_to_file(&output_path, *bytes as usize)?,
+                    };
+                }
             }
-        }
-
-        let superpath = get_superpath(&path_to_extract);
-
-        let info = self.archive_info.iter().skip(skipped_count);
-        for (path, size) in info
-        {
-            if !is_a_subdirectory(&path_to_extract, path)
-            {
-                break;
-            }
-
-            let path_stripped = path.strip_prefix(&superpath)
-                .expect("Bad path trimming.")
-                .to_string();
-            let path_to_extract = match output_directory.as_str()
-            {
-                "" => path_stripped,
-                directory => format!("{}/{}", directory, path_stripped),
-            };
-
-            if Path::new(&path_to_extract).exists()
-            {
-                println!("Path {} exists. Skipping.", path_to_extract);
-                continue;
-            }
-
-            match size
-            {
-                Some(bytes) =>
-                    self.decompressor.decompress_bytes_to_file(&path_to_extract, *bytes as usize)?,
-                None => create_dir(&path_to_extract)
-                    .map_err(|_| DecompressError::Other)?,
-            };
         }
 
         Ok(())

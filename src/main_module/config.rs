@@ -2,26 +2,16 @@ use std::env;
 use std::env::args;
 
 use crate::compress::decompress::DecompressError;
-use crate::io_utils::path_utils::get_superpath;
 use crate::main_module::{archive_and_compress, print_archive_info};
 use crate::archive::extractor::Extractor;
 
 #[derive(Eq, PartialEq)]
-pub enum ConfigOption
+pub enum ProgramConfig
 {
-    Archive,
-    ExtractAll,
-    ExtractPath,
-    Display,
-}
-
-pub struct ProgramConfig
-{
-    pub option: ConfigOption,
-    pub input_filenames: Vec<String>,
-    pub output_directory: String,
-    pub output_archive_filename: Option<String>,
-    pub chosen_path: Option<String>,
+    Archive { input_paths: Vec<String>, output_archive_path: String},
+    ExtractAll { archive_path: String, output_directory: String},
+    ExtractPaths { archive_path: String, chosen_paths: Vec<String>, output_directory: String},
+    Display { archive_path: String},
 }
 
 fn parse_archive_arguments(args: Vec<String>) -> Result<ProgramConfig, String>
@@ -38,24 +28,10 @@ fn parse_archive_arguments(args: Vec<String>) -> Result<ProgramConfig, String>
         None => vec![],
     };
 
-    let output = args[o_position + 1].clone();
-    let output_directory = get_superpath(&output);
+    let output_archive_path = args[o_position + 1].clone();
 
-    let output_archive_filename = output.strip_prefix(&output_directory)
-        .unwrap()
-        .to_string();
-
-
-    let config = ProgramConfig
-    {
-        option: ConfigOption::Archive,
-        input_filenames,
-        output_directory,
-        output_archive_filename: Some(output_archive_filename),
-        chosen_path: None,
-    };
-
-    Ok(config)
+    let option = ProgramConfig::Archive { input_paths: input_filenames, output_archive_path };
+    Ok(option)
 }
 
 fn parse_extract_all_arguments(args: Vec<String>) -> Result<ProgramConfig, String>
@@ -72,23 +48,13 @@ fn parse_extract_all_arguments(args: Vec<String>) -> Result<ProgramConfig, Strin
         None => "".to_string(),
     };
 
-    let config = ProgramConfig
-    {
-        option: ConfigOption::ExtractAll,
-        input_filenames: vec![archive_filename],
-        output_directory,
-        output_archive_filename: None,
-        chosen_path: None,
-    };
-
-
-    Ok(config)
+    let option = ProgramConfig::ExtractAll { archive_path: archive_filename, output_directory };
+    Ok(option)
 }
 
-fn parse_extract_path_arguments(args: Vec<String>) -> Result<ProgramConfig, String>
+fn parse_extract_paths_arguments(args: Vec<String>) -> Result<ProgramConfig, String>
 {
-    // divcomp.exe -ep [nazwa archiwum] -c [wybrany plik/katalog do wypakowania]
-    // -o [ścieżka do katalogu docelowego]
+    // -ep [nazwa archiwum] -c [wybrane pliki] -o [ścieżka do katalogu docelowego]
 
     let ep_position = args.iter().position(|s| s == "-ep")
         .unwrap();
@@ -109,25 +75,24 @@ fn parse_extract_path_arguments(args: Vec<String>) -> Result<ProgramConfig, Stri
     {
         return Err("No chosen path given.".to_string());
     }
-    let chosen_path = args[c_position + 1].to_string();
+
+    let o_position = args.iter().position(|s| s == "-o");
+
+    let chosen_paths = match o_position
+    {
+        None => args[c_position + 1..].to_vec(),
+        Some(pos) => args[c_position + 1..pos].to_vec(),
+    };
 
 
-    let output_directory = match args.iter().position(|s| s == "-o")
+    let output_directory = match o_position
     {
         Some(pos) => args[pos + 1].to_string(),
         None => "".to_string(),
     };
 
-    let config = ProgramConfig
-    {
-        option: ConfigOption::ExtractPath,
-        input_filenames: vec![archive_filename],
-        output_directory,
-        output_archive_filename: None,
-        chosen_path: Some(chosen_path),
-    };
-
-    Ok(config)
+    let option = ProgramConfig::ExtractPaths { archive_path: archive_filename, chosen_paths, output_directory };
+    Ok(option)
 }
 
 fn parse_display_arguments(args: Vec<String>) -> Result<ProgramConfig, String>
@@ -145,16 +110,8 @@ fn parse_display_arguments(args: Vec<String>) -> Result<ProgramConfig, String>
         }
     };
 
-    let config = ProgramConfig
-    {
-        option: ConfigOption::Display,
-        input_filenames: vec![archive_filename],
-        output_directory: "".to_string(),
-        output_archive_filename: None,
-        chosen_path: None,
-    };
-
-    Ok(config)
+    let option = ProgramConfig::Display { archive_path: archive_filename };
+    Ok(option)
 }
 
 pub fn parse_arguments() -> Result<ProgramConfig, String>
@@ -173,7 +130,7 @@ pub fn parse_arguments() -> Result<ProgramConfig, String>
     2. Wypakowanie archiwum\n\
     \t{} -ea [nazwa archiwum] -o [ścieżka do katalogu docelowego]\n\n\
     3. Wypakowanie części archiwum\n\
-    \t{} -ep [nazwa archiwum] -c [wybrany plik/katalog do wypakowania] -o [ścieżka do \
+    \t{} -ep [nazwa archiwum] -c [wybrane pliki/katalogi do wypakowania] -o [ścieżka do \
      katalogu docelowego]\n\n\
     4. Podejrzenie archiwum\n\
     \t{} -d [nazwa archiwum]\n\
@@ -190,7 +147,7 @@ pub fn parse_arguments() -> Result<ProgramConfig, String>
     {
         "-a"    => parse_archive_arguments(args),
         "-ea"   => parse_extract_all_arguments(args),
-        "-ep"   => parse_extract_path_arguments(args),
+        "-ep"   => parse_extract_paths_arguments(args),
         "-d"    => parse_display_arguments(args),
         _       => Err(usage.to_string()),
     }
@@ -209,35 +166,37 @@ fn decompress_error_to_string(error: DecompressError) -> String
 
 pub fn execute(program_config: ProgramConfig) -> Result<(), String>
 {
-    if program_config.option == ConfigOption::Archive
+    match program_config
     {
-        return archive_and_compress
-            (program_config.input_filenames, program_config.output_archive_filename.unwrap());
-    }
+        ProgramConfig::Archive { input_paths, output_archive_path } =>
+            archive_and_compress(input_paths, output_archive_path),
 
-    let archive_filename = program_config.input_filenames[0].clone();
-    let mut extractor = Extractor::new(archive_filename)
-        .map_err(|err| decompress_error_to_string(err))?;
-
-    match program_config.option
-    {
-        ConfigOption::ExtractAll => extractor.extract_all(program_config.output_directory)
-                .map_err(|err| decompress_error_to_string(err)),
-
-        ConfigOption::ExtractPath =>
+        ProgramConfig::ExtractAll { archive_path, output_directory } =>
         {
-            let chosen_path = program_config.chosen_path.unwrap();
+            let mut extractor = Extractor::new(archive_path)
+                .map_err(|err| decompress_error_to_string(err))?;
 
-            extractor.extract_path(chosen_path, program_config.output_directory)
+            extractor.extract_all(output_directory)
                 .map_err(|err| decompress_error_to_string(err))
-        }
+        },
 
-        ConfigOption::Display =>
+        ProgramConfig::ExtractPaths
+        {archive_path, chosen_paths, output_directory} =>
         {
+            let mut extractor = Extractor::new(archive_path)
+                .map_err(|err| decompress_error_to_string(err))?;
+
+            extractor.extract_paths(chosen_paths, output_directory)
+                .map_err(|err| decompress_error_to_string(err))
+        },
+
+        ProgramConfig::Display { archive_path } =>
+        {
+            let extractor = Extractor::new(archive_path)
+                .map_err(|err| decompress_error_to_string(err))?;
+
             print_archive_info(&extractor);
             Ok(())
         }
-
-        _ => Ok(()),
     }
 }
