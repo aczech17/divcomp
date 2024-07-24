@@ -1,14 +1,14 @@
 use std::fs::File;
 use std::io::Write;
-use crate::io_utils::bit_vector::{Bit, BitVector};
-use crate::io_utils::MEMORY_BUFFERS_SIZE;
 
-const BUFFER_BIT_COUNT: usize = 8 * MEMORY_BUFFERS_SIZE;
+use crate::io_utils::bit_vector::{Bit, BitVector};
+use crate::io_utils::get_memory_buffers_size;
 
 pub struct BitVectorWriter
 {
     file_handle: File,
     buffer: BitVector,
+    buffer_bit_count: usize,
 }
 
 impl BitVectorWriter
@@ -25,6 +25,7 @@ impl BitVectorWriter
         {
             file_handle,
             buffer: BitVector::new(),
+            buffer_bit_count: 8 * get_memory_buffers_size(),
         };
 
         Some(file_writer)
@@ -41,7 +42,7 @@ impl BitVectorWriter
     {
         self.buffer.push_bit(bit);
 
-        if self.buffer.size() == BUFFER_BIT_COUNT
+        if self.buffer.size() == self.buffer_bit_count
         {
             self.flush();
         }

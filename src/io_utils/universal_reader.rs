@@ -1,9 +1,7 @@
 use std::fs::File;
 use std::io::Read;
 use crate::io_utils::bit_vector::Bit;
-use crate::io_utils::MEMORY_BUFFERS_SIZE;
-
-const BUFFER_SIZE: usize = MEMORY_BUFFERS_SIZE;
+use crate::io_utils::get_memory_buffers_size;
 
 pub struct UniversalReader
 {
@@ -21,7 +19,7 @@ impl UniversalReader
         let file_reader = UniversalReader
         {
             file_handle,
-            buffer: vec![0; BUFFER_SIZE],
+            buffer: vec![0; get_memory_buffers_size()],
             bytes_in_buffer: 0,
             bytes_read_from_buffer: 0,
             bits_read_total: 0,
