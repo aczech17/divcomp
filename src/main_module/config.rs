@@ -1,4 +1,3 @@
-use std::env;
 use std::env::args;
 
 use crate::compress::decompress::DecompressError;
@@ -118,24 +117,16 @@ pub fn parse_arguments() -> Result<ProgramConfig, String>
 {
     let args: Vec<String> = args().collect();
 
-    let current_path = env::current_dir().unwrap().to_str().unwrap().to_string();
-    let program_name = args[0].clone()
-        .strip_prefix(&current_path)
-        .unwrap()
-        .to_string();
-
-    let usage = format!("\
+    let usage = "\
     1. Spakowanie plików:\n\
-    \t{} -a [nazwy plików] -o [wybrana nazwa archiwum]\n\n\
+    \t-a [nazwy plików] -o [wybrana nazwa archiwum]\n\
     2. Wypakowanie archiwum\n\
-    \t{} -ea [nazwa archiwum] -o [ścieżka do katalogu docelowego]\n\n\
+    \t-ea [nazwa archiwum] -o [ścieżka do katalogu docelowego]\n\
     3. Wypakowanie części archiwum\n\
-    \t{} -ep [nazwa archiwum] -c [wybrane pliki/katalogi do wypakowania] -o [ścieżka do \
-     katalogu docelowego]\n\n\
+    \t-ep [nazwa archiwum] -c [wybrane pliki/katalogi do wypakowania] -o [ścieżka do \
+     katalogu docelowego]\n\
     4. Podejrzenie archiwum\n\
-    \t{} -d [nazwa archiwum]\n\
-    ",
-    program_name, program_name, program_name, program_name);
+    \t-d [nazwa archiwum]";
 
 
     if args.len() < 3

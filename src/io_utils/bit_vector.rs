@@ -25,10 +25,14 @@ impl BitVector
             self.data.push(0);
         }
 
-        let byte_number = self.bits_count / 8;
-        let bit_number = self.bits_count % 8;
+        if bit == 1
+        {
+            let byte_number = self.bits_count / 8;
+            let bit_number = self.bits_count % 8;
 
-        self.data[byte_number] |= bit << (7 - bit_number);
+            self.data[byte_number] |= 1 << (7 - bit_number);
+        }
+
         self.bits_count += 1;
     }
 
@@ -48,18 +52,20 @@ impl BitVector
             panic!("Popping bit from an empty vector");
         }
 
-        let byte_number = (self.bits_count - 1) / 8;
-        let bit_number = (self.bits_count - 1) % 8;
-
-        let clearing_mask = !(1 << (7 - bit_number));
-        self.data[byte_number] &= clearing_mask;
-
-        self.bits_count -= 1;
-
-        if self.bits_count % 8 == 0
+        if self.bits_count % 8 == 1
         {
             self.data.pop();
         }
+        else
+        {
+            let byte_number = (self.bits_count - 1) / 8;
+            let bit_number = (self.bits_count - 1) % 8;
+
+            let clearing_mask = !(1 << (7 - bit_number));
+            self.data[byte_number] &= clearing_mask;
+        }
+
+        self.bits_count -= 1;
     }
 
     pub fn get_bit(&self, index: usize) -> Bit

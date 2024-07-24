@@ -1,8 +1,9 @@
 use std::fs::File;
 use std::io::Write;
 use crate::io_utils::bit_vector::{Bit, BitVector};
+use crate::io_utils::MEMORY_BUFFERS_SIZE;
 
-const BUFFER_SIZE: usize = 8 * (1 << 26);
+const BUFFER_BIT_COUNT: usize = 8 * MEMORY_BUFFERS_SIZE;
 
 pub struct BitVectorWriter
 {
@@ -40,7 +41,7 @@ impl BitVectorWriter
     {
         self.buffer.push_bit(bit);
 
-        if self.buffer.size() == BUFFER_SIZE
+        if self.buffer.size() == BUFFER_BIT_COUNT
         {
             self.flush();
         }

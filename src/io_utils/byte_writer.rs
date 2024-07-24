@@ -1,7 +1,8 @@
 use std::fs::File;
 use std::io::Write;
+use crate::io_utils::MEMORY_BUFFERS_SIZE;
 
-const BUFFER_SIZE: usize = 1 << 26;
+const BUFFER_SIZE: usize = MEMORY_BUFFERS_SIZE;
 
 pub struct ByteWriter
 {
