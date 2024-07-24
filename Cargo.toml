@@ -1,6 +1,6 @@
 [package]
 name = "divcomp"
-version = "0.44.81"
+version = "0.44.90"
 edition = "2021"
 
 [dependencies]
