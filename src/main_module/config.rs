@@ -21,11 +21,14 @@ fn parse_archive_arguments(args: Vec<String>) -> Result<ProgramConfig, String>
         None => return Err(String::from("Output path not given.")),
     };
 
-    let input_filenames = match args.iter().position(|s| s == "-a")
+    let mut input_filenames = match args.iter().position(|s| s == "-a")
     {
         Some(a_position) => args[a_position + 1..o_position].to_vec(),
         None => vec![],
     };
+    // Remove duplicated filenames so that the files aren't archived multiple times.
+    input_filenames.sort();
+    input_filenames.dedup();
 
     let output_archive_path = args[o_position + 1].clone();
 
@@ -77,11 +80,14 @@ fn parse_extract_paths_arguments(args: Vec<String>) -> Result<ProgramConfig, Str
 
     let o_position = args.iter().position(|s| s == "-o");
 
-    let chosen_paths = match o_position
+    let mut chosen_paths = match o_position
     {
         None => args[c_position + 1..].to_vec(),
         Some(pos) => args[c_position + 1..pos].to_vec(),
     };
+    // Remove duplicates.
+    chosen_paths.sort();
+    chosen_paths.dedup();
 
 
     let output_directory = match o_position
