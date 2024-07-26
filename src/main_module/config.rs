@@ -21,18 +21,33 @@ fn parse_archive_arguments(args: Vec<String>) -> Result<ProgramConfig, String>
         None => return Err(String::from("Output path not given.")),
     };
 
-    let mut input_filenames = match args.iter().position(|s| s == "-a")
+    let mut input_paths = match args.iter().position(|s| s == "-a")
     {
         Some(a_position) => args[a_position + 1..o_position].to_vec(),
         None => vec![],
     };
     // Remove duplicated filenames so that the files aren't archived multiple times.
-    input_filenames.sort();
-    input_filenames.dedup();
+    input_paths.sort();
+    input_paths.dedup();
+
+    // Convert backslash to slash.
+    let mut input_paths: Vec<String> = input_paths.iter()
+        .map(|input_path| input_path.replace("\\", "/").to_string())
+        .collect();
+
+    // Remove trailing slashes.
+    for path in &mut input_paths
+    {
+        if path.ends_with('/')
+        {
+            path.pop();
+        }
+    }
+
 
     let output_archive_path = args[o_position + 1].clone();
 
-    let option = ProgramConfig::Archive { input_paths: input_filenames, output_archive_path };
+    let option = ProgramConfig::Archive { input_paths, output_archive_path };
     Ok(option)
 }
 

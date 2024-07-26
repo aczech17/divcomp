@@ -1,5 +1,6 @@
 use std::fs;
 use std::fs::File;
+use walkdir::WalkDir;
 use crate::archive::archive_header::ArchiveHeader;
 use crate::archive::directory_info::DirectoryInfo;
 use crate::io_utils::byte_writer::ByteWriter;
@@ -26,10 +27,6 @@ pub fn archive(input_paths: Vec<String>, output_filename: String) -> Result<(), 
         .map(|path| DirectoryInfo::new(path))
         .collect();
 
-    let all_paths: Vec<String> = all_directory_infos.iter()
-        .flat_map(|info| info.get_all_file_paths())
-        .collect();
-
     let archive_header = ArchiveHeader::new(all_directory_infos)
         .map_err(|_| "Could not create archive header.")?;
 
@@ -40,11 +37,16 @@ pub fn archive(input_paths: Vec<String>, output_filename: String) -> Result<(), 
         output_writer.write_byte(byte);
     }
 
-    for path in all_paths
+    // Save the files to the archive. Now the full paths are needed.
+    for input_path in input_paths
     {
-        if !fs::metadata(&path).unwrap().is_dir()
+        for path in WalkDir::new(input_path)
         {
-            save_file_to_archive(&path, &mut output_writer)?;
+            let path = path.unwrap().path().to_str().unwrap().to_string();
+            if !fs::metadata(&path).unwrap().is_dir()
+            {
+                save_file_to_archive(&path, &mut output_writer)?;
+            }
         }
     }
 

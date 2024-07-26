@@ -1,6 +1,7 @@
 use std::fs;
 use walkdir::WalkDir;
 use serde::{Deserialize, Serialize};
+use crate::io_utils::path_utils::get_superpath;
 
 #[derive(Serialize, Deserialize)]
 struct FilesystemEntryInfo
@@ -11,7 +12,7 @@ struct FilesystemEntryInfo
 
 impl FilesystemEntryInfo
 {
-    fn new(path: &str) -> FilesystemEntryInfo
+    fn new(path: &str, superpath: &str) -> FilesystemEntryInfo
     {
         let size = if fs::metadata(&path).unwrap().is_dir()
         {
@@ -23,9 +24,13 @@ impl FilesystemEntryInfo
             Some(file_size)
         };
 
+        let path = path.strip_prefix(superpath)
+            .unwrap()
+            .to_string();
+
         FilesystemEntryInfo
         {
-            path: path.to_string(),
+            path,
             size,
         }
     }
@@ -41,12 +46,16 @@ impl DirectoryInfo
 {
     pub fn new(directory_path: &str) -> DirectoryInfo
     {
+        let directory_superpath = get_superpath(&directory_path);
+        println!("superpath: {}", directory_superpath);
+
         let mut entry_infos = vec![];
         for entry in WalkDir::new(directory_path)
         {
-            let path = entry.unwrap().path().to_str().unwrap().to_string();
-            let path = path.replace("\\", "/");
-            let entry_info = FilesystemEntryInfo::new(&path);
+            let path = entry.unwrap().path().to_str().unwrap().to_string()
+                .replace("\\", "/");
+
+            let entry_info = FilesystemEntryInfo::new(&path, &directory_superpath);
             entry_infos.push(entry_info);
         }
 
@@ -77,10 +86,10 @@ impl DirectoryInfo
             .unwrap()
     }
 
-    pub fn get_all_file_paths(&self) -> Vec<String>
-    {
-        self.infos.iter().map(|line| line.path.clone()).collect()
-    }
+    // pub fn get_all_file_paths(&self) -> Vec<String>
+    // {
+    //     self.infos.iter().map(|line| line.path.clone()).collect()
+    // }
 
     pub fn get_paths_and_sizes(&self) -> Vec<(String, Option<u64>)>
     {
