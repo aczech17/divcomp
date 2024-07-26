@@ -47,7 +47,6 @@ impl DirectoryInfo
     pub fn new(directory_path: &str) -> DirectoryInfo
     {
         let directory_superpath = get_superpath(&directory_path);
-        println!("superpath: {}", directory_superpath);
 
         let mut entry_infos = vec![];
         for entry in WalkDir::new(directory_path)
@@ -85,11 +84,6 @@ impl DirectoryInfo
         serde_json::from_str(&data_string)
             .unwrap()
     }
-
-    // pub fn get_all_file_paths(&self) -> Vec<String>
-    // {
-    //     self.infos.iter().map(|line| line.path.clone()).collect()
-    // }
 
     pub fn get_paths_and_sizes(&self) -> Vec<(String, Option<u64>)>
     {
