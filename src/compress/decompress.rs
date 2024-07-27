@@ -12,6 +12,18 @@ pub enum DecompressError
     EmptyFile, BadFormat, FileTooShort, FileOpenError, Other,
 }
 
+pub fn decompress_error_to_string(error: DecompressError) -> String
+{
+    match error
+    {
+        DecompressError::BadFormat  => "Invalid archive.",
+        DecompressError::EmptyFile => "Invalid archive. The file is empty.",
+        DecompressError::FileTooShort => "Invalid archive. The file is too short.",
+        DecompressError::FileOpenError => "Could not open the file.",
+        DecompressError::Other => "Error while decompressing.",
+    }.to_string()
+}
+
 type Dictionary = HashMap<u8, BitVector>;
 
 pub struct Decompressor

@@ -1,8 +1,8 @@
 use std::env::args;
 
-use crate::compress::decompress::DecompressError;
-use crate::main_module::{archive_and_compress, print_archive_info};
 use crate::archive::extractor::Extractor;
+use crate::compress::decompress::decompress_error_to_string;
+use crate::main_module::{archive_and_compress, print_archive_info};
 
 #[derive(Eq, PartialEq)]
 pub enum ProgramConfig
@@ -163,17 +163,6 @@ pub fn parse_arguments() -> Result<ProgramConfig, String>
         "-d"    => parse_display_arguments(args),
         _       => Err(usage.to_string()),
     }
-}
-
-fn decompress_error_to_string(error: DecompressError) -> String
-{
-    match error
-    {
-        DecompressError::BadFormat | DecompressError::FileTooShort | DecompressError::EmptyFile =>
-            "Invalid archive.",
-        DecompressError::FileOpenError => "Could not open the file.",
-        DecompressError::Other => "Error while decompressing.",
-    }.to_string()
 }
 
 pub fn execute(program_config: ProgramConfig) -> Result<(), String>
