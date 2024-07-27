@@ -29,7 +29,7 @@ impl Extractor
 
         let mut signature: Vec<u8> = vec![0; expected_signature.len()];
         archive_file.read(&mut signature)
-            .map_err(|_| DecompressError::BadFormat)?;
+            .map_err(|_| DecompressError::FileTooShort)?;
 
         if signature != expected_signature
         {
