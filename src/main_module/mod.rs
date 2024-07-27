@@ -1,5 +1,5 @@
 use std::fs;
-
+use std::path::Path;
 use crate::archive::archive::archive;
 use crate::compress::compress::compress;
 use crate::io_utils::get_tmp_file_name;
@@ -9,6 +9,11 @@ pub mod config;
 
 pub fn archive_and_compress(input_paths: Vec<String>, archive_filename: String) -> Result<(), String>
 {
+    if Path::new(&archive_filename).exists()
+    {
+        return Err("Path already exists.".to_string());
+    }
+
     let tmp_file_name = get_tmp_file_name()
         .map_err(|_| "Could not find a proper name for a temporary file while archiving.")?;
     archive(input_paths, tmp_file_name.clone())?;
