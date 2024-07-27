@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::fs;
 use std::fs::File;
 
 use crate::compress::byte_writer::ByteWriter;
@@ -24,9 +23,9 @@ pub struct Decompressor
 impl Decompressor
 {
 
-    pub fn new(input_filename: &str) -> Result<Decompressor, DecompressError>
+    pub fn new(input_file: File) -> Result<Decompressor, DecompressError>
     {
-        let input_file_size = fs::metadata(input_filename)
+        let input_file_size = input_file.metadata()
             .unwrap()
             .len() as usize;
 
@@ -35,11 +34,6 @@ impl Decompressor
             return Err(DecompressError::EmptyFile);
         }
 
-        let input_file = match File::open(input_filename)
-        {
-            Ok(f) => f,
-            Err(_) => return Err(DecompressError::FileOpenError)
-        };
         let mut file_reader = UniversalReader::new(input_file);
 
 

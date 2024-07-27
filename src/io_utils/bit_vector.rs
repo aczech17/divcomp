@@ -18,6 +18,20 @@ impl BitVector
         }
     }
 
+    pub fn from_u64(number: u64) -> Self
+    {
+        let data: Vec<u8> = number.to_be_bytes().to_vec()
+            .into_iter().skip_while(|&byte| byte == 0) // Remove leading zeros.
+            .collect();
+        let bits_count = data.len() * 8;
+
+        Self
+        {
+            data,
+            bits_count,
+        }
+    }
+
     pub fn push_bit(&mut self, bit: Bit)
     {
         if self.bits_count % 8 == 0

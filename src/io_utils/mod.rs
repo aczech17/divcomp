@@ -9,6 +9,8 @@ pub mod bit_vector;
 pub mod bit_vector_writer;
 pub mod path_utils;
 
+pub const SIGNATURE: u64 = 0x0AF17E;
+
 pub fn bytes_to_u64(bytes: Vec<u8>) -> u64
 {
     let buffer: [u8; 8] = bytes.try_into().unwrap();

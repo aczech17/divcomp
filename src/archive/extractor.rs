@@ -1,12 +1,12 @@
-use std::fs::{create_dir, create_dir_all};
+use std::fs::{create_dir, create_dir_all, File};
 use std::io;
-use std::io::Write;
+use std::io::{Read, Write};
 use std::path::Path;
 
 use crate::archive::directory_info::DirectoryInfo;
 use crate::compress::decompress::{DecompressError, Decompressor};
 use crate::io_utils::byte_buffer::ByteBuffer;
-use crate::io_utils::bytes_to_u64;
+use crate::io_utils::{bytes_to_u64, SIGNATURE};
 use crate::io_utils::path_utils::{get_superpath, is_a_subdirectory};
 
 pub struct Extractor
@@ -19,7 +19,25 @@ impl Extractor
 {
     pub fn new(archive_filename: String) -> Result<Extractor, DecompressError>
     {
-        let mut decompressor = Decompressor::new(&archive_filename)?;
+        let mut archive_file = File::open(archive_filename)
+            .map_err(|_| DecompressError::FileOpenError)?;
+
+        // Check signature.
+        let expected_signature: Vec<u8> = SIGNATURE.to_be_bytes().to_vec()
+            .into_iter().skip_while(|&byte| byte == 0)
+            .collect();
+
+        let mut signature: Vec<u8> = vec![0; expected_signature.len()];
+        archive_file.read(&mut signature)
+            .map_err(|_| DecompressError::BadFormat)?;
+
+        if signature != expected_signature
+        {
+            return Err(DecompressError::BadFormat);
+        }
+
+
+        let mut decompressor = Decompressor::new(archive_file)?;
 
         let header_size =
             bytes_to_u64(decompressor.decompress_bytes_to_memory(8)?);

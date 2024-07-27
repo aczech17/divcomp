@@ -1,7 +1,9 @@
 use std::fs::File;
 
 use crate::compress::huffman_tree::HuffmanTree;
+use crate::io_utils::bit_vector::BitVector;
 use crate::io_utils::bit_vector_writer::BitVectorWriter;
+use crate::io_utils::SIGNATURE;
 use crate::io_utils::universal_reader::UniversalReader;
 
 pub fn compress(input_filename: &str, output_filename: &str) -> Result<(), String>
@@ -31,6 +33,7 @@ pub fn compress(input_filename: &str, output_filename: &str) -> Result<(), Strin
     };
 
     // Start writing to file.
+    file_writer.write_bit_vector(&BitVector::from_u64(SIGNATURE));
     file_writer.write_bit_vector(&tree_encoding);
 
 
