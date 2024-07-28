@@ -16,11 +16,10 @@ pub fn decompress_error_to_string(error: DecompressError) -> String
 {
     match error
     {
-        DecompressError::BadFormat  => "Invalid archive.",
-        DecompressError::EmptyFile => "Invalid archive. The file is empty.",
-        DecompressError::FileTooShort => "Invalid archive. The file is too short.",
-        DecompressError::FileOpenError => "Could not open the file.",
-        DecompressError::Other => "Error while decompressing.",
+        DecompressError::BadFormat | DecompressError::EmptyFile | DecompressError::FileTooShort
+            => "Nieprawidłowy plik z archiwum.",
+        DecompressError::FileOpenError => "Nie udało się otworzyć pliku.",
+        DecompressError::Other => "Błąd dekompresji.",
     }.to_string()
 }
 

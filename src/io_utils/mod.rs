@@ -9,7 +9,7 @@ pub mod bit_vector;
 pub mod bit_vector_writer;
 pub mod path_utils;
 
-pub const SIGNATURE: u64 = 0x0AF17E;
+pub const SIGNATURE: u64 = 0xAEF17E;
 
 pub fn bytes_to_u64(bytes: Vec<u8>) -> u64
 {
@@ -47,4 +47,38 @@ pub fn get_memory_buffers_size() -> usize
 
     let total_memory = system_info.total_memory();
     (total_memory / 16) as usize
+}
+
+pub fn sanitize_path(path: &String) -> String
+{
+    let mut path = path.replace("\\", "/")
+        .replace("\"", "");
+    if path.ends_with('/')
+    {
+        path.pop();
+    }
+
+    path
+}
+
+fn sanitize_all_paths(paths: Vec<String>) -> Vec<String>
+{
+    let mut paths: Vec<String> = paths.iter()
+        .map(|path| sanitize_path(path))
+        .collect();
+
+    paths.sort();
+    paths.dedup();
+
+    paths
+}
+
+pub fn parse_paths(text: &str) -> Vec<String>
+{
+    let paths: Vec<String> = text
+        .lines()
+        .map(|line| line.to_string())
+        .collect();
+
+    sanitize_all_paths(paths)
 }
