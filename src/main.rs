@@ -1,21 +1,19 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
 use std::path::Path;
-use main_module::config::parse_arguments;
+use std::sync::{Arc, Mutex};
+use std::thread;
 
-use crate::main_module::config::execute;
+use eframe::egui;
 
-mod main_module;
+use crate::archive::extractor::Extractor;
+use crate::compress::decompress::decompress_error_to_string;
+use crate::io_utils::{parse_paths, sanitize_path};
+use crate::compress::compress::archive_and_compress;
+
 mod compress;
 mod archive;
 mod io_utils;
-
-
-use eframe::egui;
-use crate::archive::extractor::Extractor;
-use crate::compress::decompress::{decompress_error_to_string, DecompressError};
-use crate::io_utils::{parse_paths, sanitize_path};
-use crate::main_module::archive_and_compress;
 
 
 struct MyApp
@@ -23,10 +21,17 @@ struct MyApp
     input_archive_path_input: String,
     choose_files_to_extract_input: String,
     output_directory_input: String,
+
+    archive_content_display_result: Arc<Mutex<Option<String>>>,
     archive_content_display: String,
+
     paths_to_archive_input: String,
     output_archive_path_input: String,
+
+    status_display_result: Arc<Mutex<Option<String>>>,
     status_display: String,
+
+    processing: bool,
 }
 
 impl Default for MyApp
@@ -38,10 +43,13 @@ impl Default for MyApp
             input_archive_path_input: String::new(),
             choose_files_to_extract_input: String::new(),
             output_directory_input: String::new(),
+            archive_content_display_result: Arc::new(Mutex::new(None)),
             archive_content_display: String::new(),
             paths_to_archive_input: String::new(),
             output_archive_path_input: String::new(),
+            status_display_result: Arc::new(Mutex::new(None)),
             status_display: String::new(),
+            processing: false,
         }
     }
 }
@@ -52,6 +60,16 @@ impl eframe::App for MyApp
     {
         egui::CentralPanel::default().show(ctx, |ui|
         {
+            if let Some(display) = self.archive_content_display_result.lock().unwrap().take()
+            {
+                self.archive_content_display = display;
+            }
+
+            if let Some(display) = self.status_display_result.lock().unwrap().take()
+            {
+                self.status_display = display;
+            }
+
             ui.horizontal(|ui|
             {
                 ui.add(egui::TextEdit::singleline(&mut self.input_archive_path_input)
@@ -59,24 +77,41 @@ impl eframe::App for MyApp
 
                 if ui.button("Pokaż").clicked()
                 {
-                    let input_path = sanitize_path(&self.input_archive_path_input);
-                    let mut extractor = match Extractor::new(input_path)
+                    if self.processing
                     {
-                        Ok(ext) => ext,
-                        Err(err) =>
+                        return;
+                    }
+
+                    self.processing = true;
+                    self.archive_content_display = String::new();
+                    let input_path = sanitize_path(&self.input_archive_path_input);
+                    let result = Arc::clone(&self.archive_content_display_result);
+
+                    thread::spawn(move ||
+                    {
+                        let extractor = match Extractor::new(input_path)
                         {
-                            self.archive_content_display = decompress_error_to_string(err);
-                            return;
-                        }
-                    };
+                            Ok(ext) => ext,
+                            Err(err) =>
+                            {
+                                let err_msg = decompress_error_to_string(err);
+                                let mut result_lock = result.lock().unwrap();
+                                *result_lock = Some(err_msg);
+                                return;
+                            },
+                        };
 
-                    let content = extractor.get_archive_info()
-                        .iter()
-                        .map(|(path, size)| format!("{} {:?}", path, size))
-                        .collect::<Vec<String>>()
-                        .join("\n");
+                        let content = extractor.get_archive_info()
+                            .iter()
+                            .map(|(path, size)| format!("{} {:?}", path, size))
+                            .collect::<Vec<String>>()
+                            .join("\n");
 
-                    self.archive_content_display = content;
+                        let mut result_lock = result.lock().unwrap();
+                        *result_lock = Some(content)
+                    });
+
+                    self.processing = false;
                 }
             });
 
@@ -99,34 +134,49 @@ impl eframe::App for MyApp
 
                 if ui.button("Wypakuj").clicked()
                 {
+                    if self.processing
+                    {
+                        return;
+                    }
+
+                    self.processing = true;
+                    self.status_display = String::from("Wypakowywanie...");
+
                     let input_path = sanitize_path(&self.input_archive_path_input);
-                    let mut extractor = match Extractor::new(input_path)
-                    {
-                        Ok(ext) => ext,
-                        Err(err) =>
-                            {
-                                self.archive_content_display = decompress_error_to_string(err);
-                                return;
-                            }
-                    };
-
                     let output_directory = self.output_directory_input.clone();
-                    let extraction_result =
-                        match self.choose_files_to_extract_input.as_str()
-                    {
-                        "" => extractor.extract_all(output_directory),
-                        input =>
-                        {
-                            let chosen_paths = parse_paths(input);
-                            extractor.extract_paths(chosen_paths, output_directory)
-                        }
-                    };
+                    let chosen_paths = parse_paths(&self.choose_files_to_extract_input);
+                    let result = Arc::clone(&self.status_display_result);
 
-                    self.status_display = match extraction_result
+                    thread::spawn(move ||
                     {
-                        Ok(_) => "Wypakowano".to_string(),
-                        Err(err) => decompress_error_to_string(err),
-                    };
+                        let mut extractor = match Extractor::new(input_path)
+                        {
+                            Ok(ext) => ext,
+                            Err(err) =>
+                                {
+                                    let error_msg = decompress_error_to_string(err);
+                                    let mut result_lock = result.lock().unwrap();
+                                    *result_lock = Some(error_msg);
+                                    return;
+                                },
+                        };
+
+                        let extraction_result = match chosen_paths.is_empty()
+                        {
+                            true => extractor.extract_all(output_directory),
+                            false => extractor.extract_paths(chosen_paths, output_directory),
+                        };
+
+                        let status_message = match extraction_result
+                        {
+                            Ok(_) => "Wypakowano.".to_string(),
+                            Err(err) => decompress_error_to_string(err),
+                        };
+
+                        let mut result_lock = result.lock().unwrap();
+                        *result_lock = Some(status_message);
+                    });
+                    self.processing = false;
                 }
             });
 
@@ -147,7 +197,11 @@ impl eframe::App for MyApp
                     .hint_text("Ścieżka do wynikowego archiwum..."));
                 if ui.button("Spakuj").clicked()
                 {
-                    self.status_display = String::new();
+                    if self.processing
+                    {
+                        return;
+                    }
+
                     let input_paths = parse_paths(&self.paths_to_archive_input);
 
                     for path in &input_paths
@@ -159,13 +213,26 @@ impl eframe::App for MyApp
                         }
                     }
 
+
                     let output_path = sanitize_path(&self.output_archive_path_input);
 
-                    self.status_display = match archive_and_compress(input_paths, output_path)
+                    self.processing = true;
+                    self.status_display = String::from("Pakowanie...");
+                    let result = Arc::clone(&self.status_display_result);
+
+                    thread::spawn(move ||
                     {
-                        Ok(_) => "Spakowano.".to_string(),
-                        Err(err_msg) => err_msg,
-                    };
+                        let status_message = match archive_and_compress(input_paths, output_path)
+                        {
+                            Ok(_) => "Spakowano.".to_string(),
+                            Err(err_msg) => err_msg,
+                        };
+
+                        let mut result_lock = result.lock().unwrap();
+                        *result_lock = Some(status_message);
+                    });
+
+                    self.processing = false;
                 }
             });
 
@@ -186,7 +253,8 @@ fn main() -> eframe::Result
         ..Default::default()
     };
 
-    eframe::run_native(
+    eframe::run_native
+    (
         "Archiwizator boży",
         options,
         Box::new(|_cc|
