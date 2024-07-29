@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::fs::File;
 
 use crate::compress::byte_writer::ByteWriter;
+use crate::compress::Decompress;
 use crate::compress::huffman_tree::HuffmanTree;
 use crate::compress::universal_reader::UniversalReader;
 use crate::io_utils::bit_vector::BitVector;
@@ -25,16 +26,15 @@ pub fn decompress_error_to_string(error: DecompressError) -> String
 
 type Dictionary = HashMap<u8, BitVector>;
 
-pub struct Decompressor
+pub struct HuffmanDecompressor
 {
     file_reader: UniversalReader,
     dictionary: Dictionary,
 }
 
-impl Decompressor
+impl HuffmanDecompressor
 {
-
-    pub fn new(input_file: File) -> Result<Decompressor, DecompressError>
+    pub fn new(input_file: File) -> Result<HuffmanDecompressor, DecompressError>
     {
         let input_file_size = input_file.metadata()
             .unwrap()
@@ -52,7 +52,7 @@ impl Decompressor
             .map_err(|_| DecompressError::BadFormat)?;
         let dictionary = huffman_tree.get_bytes_encoding();
 
-        let decompressor = Decompressor
+        let decompressor = HuffmanDecompressor
         {
             file_reader,
             dictionary,
@@ -125,9 +125,11 @@ impl Decompressor
 
         Ok(potential_result_vector)
     }
+}
 
-    pub fn decompress_bytes_to_memory(&mut self, bytes_to_get: usize)
-        -> Result<Vec<u8>, DecompressError>
+impl Decompress for HuffmanDecompressor
+{
+    fn decompress_bytes_to_memory(&mut self, bytes_to_get: usize) -> Result<Vec<u8>, DecompressError>
     {
         let bytes =
             self.decompress_somewhere(bytes_to_get, None, true)?;
@@ -135,15 +137,14 @@ impl Decompressor
         Ok(bytes.unwrap())
     }
 
-    pub fn decompress_bytes_to_file(&mut self, output_filename: &str, count: usize)
-        -> Result<(), DecompressError>
+    fn decompress_bytes_to_file(&mut self, output_filename: &str, count: usize) -> Result<(), DecompressError>
     {
         self.decompress_somewhere(count, Some(output_filename.to_owned()), false)?;
 
         Ok(())
     }
 
-    pub fn ignore(&mut self, bytes_count: usize) -> Result<(), DecompressError>
+    fn ignore(&mut self, bytes_count: usize) -> Result<(), DecompressError>
     {
         self.decompress_somewhere(bytes_count, None, false)?;
 

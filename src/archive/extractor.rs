@@ -4,14 +4,15 @@ use std::io::{Read, Write};
 use std::path::Path;
 
 use crate::archive::directory_info::DirectoryInfo;
-use crate::compress::decompress::{DecompressError, Decompressor};
+use crate::compress::Decompress;
+use crate::compress::decompress::{DecompressError, HuffmanDecompressor};
 use crate::io_utils::byte_buffer::ByteBuffer;
 use crate::io_utils::{bytes_to_u64, SIGNATURE};
 use crate::io_utils::path_utils::{get_superpath, is_a_subdirectory};
 
 pub struct Extractor
 {
-    decompressor: Decompressor,
+    decompressor: HuffmanDecompressor,
     archive_info: Vec<(String, Option<u64>)>,
 }
 
@@ -37,7 +38,7 @@ impl Extractor
         }
 
 
-        let mut decompressor = Decompressor::new(archive_file)?;
+        let mut decompressor = HuffmanDecompressor::new(archive_file)?;
 
         let header_size =
             bytes_to_u64(decompressor.decompress_bytes_to_memory(8)?);
