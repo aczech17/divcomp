@@ -4,7 +4,7 @@ use std::thread;
 use eframe::egui;
 use crate::archive::{create_extractor_and_execute, display_archive_content, extract_archive};
 use crate::compress::compress::archive_and_compress;
-use crate::io_utils::{parse_paths, sanitize_path};
+use crate::io_utils::path_utils::{parse_paths, sanitize_path};
 
 pub struct GUI
 {
@@ -118,7 +118,7 @@ impl eframe::App for GUI
                     self.status_display = String::from("Wypakowywanie...");
 
                     let input_path = sanitize_path(&self.input_archive_path_input);
-                    let output_directory = self.output_directory_input.clone();
+                    let output_directory = sanitize_path(&self.output_directory_input);
                     let chosen_paths = parse_paths(&self.choose_files_to_extract_input);
                     let result = Arc::clone(&self.status_display_result);
 

@@ -1,11 +1,19 @@
-use std::fs::File;
-use crate::compress::decompress::{DecompressError, HuffmanDecompressor};
-use crate::io_utils::universal_reader;
+use crate::compress::decompress::DecompressError;
 use crate::io_utils::byte_writer;
+use crate::io_utils::universal_reader;
+
 mod huffman_tree;
 pub mod compress;
 
 pub mod decompress;
+
+pub mod huffman_decompressor;
+pub mod lz77_decompressor;
+
+pub trait Compress
+{
+    fn compress(&self, input_filename: &str, output_filename: &str) -> Result<(), String>;
+}
 
 pub trait Decompress
 {
@@ -15,3 +23,4 @@ pub trait Decompress
         -> Result<(), DecompressError>;
     fn ignore(&mut self, bytes_count: usize) -> Result<(), DecompressError>;
 }
+

@@ -5,14 +5,16 @@ use std::path::Path;
 
 use crate::archive::directory_info::DirectoryInfo;
 use crate::compress::Decompress;
-use crate::compress::decompress::{DecompressError, HuffmanDecompressor};
+use crate::compress::decompress::{DecompressError};
+use crate::compress::huffman_decompressor::HuffmanDecompressor;
+use crate::compress::lz77_decompressor::LZ77Decompressor;
 use crate::io_utils::byte_buffer::ByteBuffer;
-use crate::io_utils::{bytes_to_u64, SIGNATURE};
+use crate::io_utils::{bytes_to_u64, HUFFMAN_SIGNATURE, LZ77_SIGNATURE};
 use crate::io_utils::path_utils::{get_superpath, is_a_subdirectory};
 
 pub struct Extractor
 {
-    decompressor: HuffmanDecompressor,
+    decompressor: Box<dyn Decompress>,
     archive_info: Vec<(String, Option<u64>)>,
 }
 
@@ -24,21 +26,33 @@ impl Extractor
             .map_err(|_| DecompressError::FileOpenError)?;
 
         // Check signature.
-        let expected_signature: Vec<u8> = SIGNATURE.to_be_bytes().to_vec()
+        let huffman_signature: Vec<u8> = HUFFMAN_SIGNATURE.to_be_bytes().to_vec()
             .into_iter().skip_while(|&byte| byte == 0)
             .collect();
 
-        let mut signature: Vec<u8> = vec![0; expected_signature.len()];
+        let lz77_signature: Vec<u8> = LZ77_SIGNATURE.to_be_bytes().to_vec()
+            .into_iter().skip_while(|&byte| byte == 0)
+            .collect();
+
+
+        let mut signature: Vec<u8> = vec![0; huffman_signature.len()];
         archive_file.read(&mut signature)
             .map_err(|_| DecompressError::FileTooShort)?;
 
-        if signature != expected_signature
+
+        let mut decompressor: Box<dyn Decompress> = if signature == huffman_signature
+        {
+            Box::new(HuffmanDecompressor::new(archive_file)?)
+        }
+        else if signature == lz77_signature
+        {
+            Box::new(LZ77Decompressor::new(archive_file)?)
+        }
+        else
         {
             return Err(DecompressError::BadFormat);
-        }
+        };
 
-
-        let mut decompressor = HuffmanDecompressor::new(archive_file)?;
 
         let header_size =
             bytes_to_u64(decompressor.decompress_bytes_to_memory(8)?);
