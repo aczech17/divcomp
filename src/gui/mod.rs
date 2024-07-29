@@ -118,7 +118,7 @@ impl eframe::App for GUI
                     self.status_display = String::from("Wypakowywanie...");
 
                     let input_path = sanitize_path(&self.input_archive_path_input);
-                    let output_directory = self.output_directory_input.clone();
+                    let output_directory = sanitize_path(&self.output_directory_input);
                     let chosen_paths = parse_paths(&self.choose_files_to_extract_input);
                     let result = Arc::clone(&self.status_display_result);
 
