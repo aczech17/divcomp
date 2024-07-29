@@ -1,5 +1,5 @@
 use crate::archive::extractor::Extractor;
-use crate::compress::decompress::decompress_error_to_string;
+use crate::compress::decompress_error_to_string;
 
 pub mod directory_info;
 mod archive_header;
