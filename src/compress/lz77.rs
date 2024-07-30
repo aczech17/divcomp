@@ -249,4 +249,14 @@ mod compression_test
 
         assert_eq!(1, 1);
     }
+
+    #[test]
+    fn test_hello()
+    {
+        let compressor = LZ77Compressor;
+        compressor.compress("hello.txt", "output.bin").
+            unwrap();
+
+        assert_eq!(1, 1);
+    }
 }
