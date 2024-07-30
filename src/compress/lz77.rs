@@ -142,7 +142,13 @@ impl Compress for LZ77Compressor
         let mut window = Window::new(input);
 
         let mut output = ByteWriter::new(output_filename)?;
-        for signature_byte in LZ77_SIGNATURE.to_be_bytes()
+
+        let signature_bytes: Vec<u8> = LZ77_SIGNATURE.to_be_bytes()
+            .into_iter()
+            .skip_while(|&byte| byte == 0)
+            .collect();
+
+        for signature_byte in signature_bytes
         {
             output.write_byte(signature_byte);
         }
@@ -179,6 +185,7 @@ pub struct LZ77Decompressor
 
 }
 
+#[allow(dead_code, unused_variables)]
 impl LZ77Decompressor
 {
     pub fn new(input_file: File) -> Result<Self, DecompressError>
@@ -189,6 +196,7 @@ impl LZ77Decompressor
     }
 }
 
+#[allow(dead_code, unused_variables)]
 impl Decompress for LZ77Decompressor
 {
     fn decompress_bytes_to_memory(&mut self, bytes_to_get: usize) -> Result<Vec<u8>, DecompressError> {
@@ -203,131 +211,6 @@ impl Decompress for LZ77Decompressor
         todo!()
     }
 }
-
-// #[cfg(test)]
-// mod matching_test
-// {
-//     use crate::compress::lz77::Window;
-//
-//     #[test]
-//     fn no_match_and_nothing_next()
-//     {
-//         let data = "PIESKOT".as_bytes();
-//         let text_range = 0..4;
-//         let pattern_range = 4..data.len();
-//
-//         let expected = (0, 0, None);
-//         let result = find_longest_prefix(data, pattern_range, text_range);
-//
-//         assert_eq!(expected, result);
-//     }
-//
-//     #[test]
-//     fn no_match_and_something_next()
-//     {
-//         let data = "PIESKOTEK".as_bytes();
-//         let text_range = 0..4;
-//         let pattern_range = 4..7;
-//
-//         let expected = (0, 0, Some('E' as u8));
-//         let result = find_longest_prefix(data, pattern_range, text_range);
-//
-//         assert_eq!(expected, result);
-//     }
-//
-//     #[test]
-//     fn overlapping_buffers()
-//     {
-//         // EUROKO KOK
-//         let data = "EUROKOKOK".as_bytes();
-//         let text_range = 0..6;
-//         let pattern_range = 6..data.len();
-//
-//         let expected = (2, 2, Some('K' as u8));
-//         let result = find_longest_prefix(data, pattern_range, text_range);
-//
-//         assert_eq!(expected, result);
-//     }
-//
-//     #[test]
-//     fn overlapping_2()
-//     {
-//         let data = "KOKOKOKO".as_bytes();
-//         let text_range = 0..2;
-//         let pattern_range = 2..data.len();
-//
-//         let expected = (2, 5, Some('O' as u8));
-//         let result = find_longest_prefix(data, pattern_range, text_range);
-//
-//         assert_eq!(expected, result);
-//     }
-//
-//     #[test]
-//     fn overlapping_3()
-//     {
-//         let data = "KOKOKOEU".as_bytes();
-//         let text_range = 0..2;
-//         let pattern_range = 2..data.len();
-//
-//         let expected = (2, 4, Some('E' as u8));
-//         let result = find_longest_prefix(data, pattern_range, text_range);
-//
-//         assert_eq!(expected, result);
-//     }
-//
-//     #[test]
-//     fn overlapping_4()
-//     {
-//         let data = "OKOKOKOEU".as_bytes();
-//         let text_range = 0..3;
-//         let pattern_range = 3..data.len();
-//
-//         let expected = (2, 4, Some('E' as u8));
-//         let result = find_longest_prefix(data, pattern_range, text_range);
-//
-//         assert_eq!(expected, result);
-//     }
-//
-//
-//     #[test]
-//     fn last_occurence()
-//     {
-//         let data = "OKKURDEOKOKDUPA".as_bytes();
-//         let text_range = 0..9;
-//         let pattern_range = 9..data.len();
-//
-//         let expected = (2, 2, Some('D' as u8));
-//         let result = find_longest_prefix(data, pattern_range, text_range);
-//
-//         assert_eq!(expected, result);
-//     }
-//
-//     #[test]
-//     fn match_size_is_1()
-//     {
-//         let data = "KKOKOKO".as_bytes();
-//         let text_range = 0..1;
-//         let pattern_range = 1..data.len();
-//
-//         let expected = (1, 1, Some('O' as u8));
-//         let result = find_longest_prefix(data, pattern_range, text_range);
-//
-//         assert_eq!(expected, result);
-//     }
-//
-//     #[test]
-//     fn empty_text_range()
-//     {
-//         let data = "KOKOKO".as_bytes();
-//         let text_range = 0..0;
-//         let pattern_range = 0..data.len();
-//
-//         let expected = (0, 0, Some('K' as u8));
-//         let result = find_longest_prefix(data, pattern_range, text_range);
-//
-//         assert_eq!(expected, result);
-//     }
-// }
 
 #[cfg(test)]
 mod compression_test

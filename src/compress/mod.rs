@@ -8,6 +8,7 @@ use crate::io_utils::{byte_writer, get_tmp_file_name};
 pub mod huffman;
 pub mod lz77;
 
+#[allow(dead_code)]
 pub enum CompressionMethod
 {
     HUFFMAN, LZ77,
