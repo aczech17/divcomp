@@ -80,11 +80,6 @@ impl Window
         [long_buffer, short_buffer].concat()
     }
 
-    fn get_next_byte(&mut self) -> Option<u8>
-    {
-        self.file_reader.read_byte()
-    }
-
     fn find_longest_prefix(&self)
         ->
         (
@@ -160,20 +155,12 @@ impl Compress for LZ77Compressor
 
         while !window.short_buffer_is_empty()
         {
-            let (offset, match_size, mut byte_after) =
+            let (offset, match_size, byte_after) =
                 window.find_longest_prefix();
 
             output.write_byte(offset as u8);
             output.write_byte(match_size as u8);
-            if match_size == window.short_buffer.len()
-            {
-                byte_after = window.get_next_byte();
-                window.shift_n_times(match_size);
-            }
-            else
-            {
-                window.shift_n_times(match_size + 1);
-            }
+            window.shift_n_times(match_size + 1);
 
             if let Some(byte) = byte_after
             {
@@ -248,6 +235,16 @@ mod compression_test
     {
         let compressor = LZ77Compressor;
         compressor.compress("test3.txt", "output.bin").
+            unwrap();
+
+        assert_eq!(1, 1);
+    }
+
+    #[test]
+    fn test4()
+    {
+        let compressor = LZ77Compressor;
+        compressor.compress("test4.txt", "output.bin").
             unwrap();
 
         assert_eq!(1, 1);
