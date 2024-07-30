@@ -105,9 +105,14 @@ impl Window
             return (0, 0, data.get(pattern_range.start).cloned());
         }
 
+        if pattern_range.len() == 1
+        {
+            return (0, 0, data.get(pattern_range.start).cloned());
+        }
+
         let pattern_len = pattern_range.end - pattern_range.start;
 
-        for prefix_len in (1..=pattern_len).rev() // Starting from the longest possible prefix.
+        for prefix_len in (1..=pattern_len - 1).rev() // Starting from the longest possible prefix.
         {
             let prefix = &data[pattern_range.start..pattern_range.start + prefix_len];
 
