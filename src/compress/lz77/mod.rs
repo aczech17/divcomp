@@ -50,12 +50,14 @@ impl Compress for LZ77Compressor
 
             Self::write_usize_to_file(offset, &mut output);
             Self::write_usize_to_file(match_size, &mut output);
-            window.shift_n_times(match_size + 1);
 
+            // If no byte left, leave a trailing empty place.
             if let Some(byte) = byte_after
             {
                 output.write_byte(byte);
             }
+
+            window.shift_n_times(match_size + 1);
         }
 
         Ok(())

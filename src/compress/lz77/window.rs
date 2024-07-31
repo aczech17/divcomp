@@ -79,7 +79,7 @@ impl Window
         (
             usize,  // offset between pattern start and last match (0 if no match)
             usize,          // prefix size (0 if no match)
-            Option<u8>,     // next byte after
+            Option<u8>,     // next byte after the matching prefix
         )
     {
         let data = self.data();
@@ -98,29 +98,28 @@ impl Window
             return (0, 0, data.get(long_len).cloned());
         }
 
-        let pattern_start = long_len;
-        let pattern_len = short_len;
+        let short_start = long_len;
 
         // Starting from the longest possible prefix. Only proper prefix!
-        for prefix_len in (1..pattern_len).rev()
+        for prefix_len in (1..short_len).rev()
         {
-            let pattern_prefix = &data[pattern_start .. pattern_start + prefix_len];
+            let short_prefix = &data[short_start.. short_start + prefix_len];
 
             for start_index in (0..long_len).rev() // Looking for the last occurence.
             {
                 let potential_match = &data[start_index..start_index + prefix_len];
-                if potential_match == pattern_prefix
+                if potential_match == short_prefix
                 {
-                    let next_after = data.get(pattern_start + prefix_len).cloned();
-                    let index = pattern_start - start_index;
+                    let next_after = data.get(short_start + prefix_len).cloned();
+                    let index = short_start - start_index;
 
                     return (index, prefix_len, next_after);
                 }
             }
         }
 
-        // If not pattern matches, return the next byte after the pattern (maybe none).
-        let next = data.get(pattern_start).cloned();
+        // If no pattern matches, return the start byte of the short buffer (maybe none).
+        let next = data.get(short_start).cloned();
         (0, 0, next)
     }
 }
