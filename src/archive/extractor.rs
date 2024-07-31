@@ -6,11 +6,11 @@ use std::path::Path;
 use crate::archive::directory_info::DirectoryInfo;
 use crate::compress::Decompress;
 use crate::compress::DecompressError;
+use crate::compress::huffman::HuffmanDecompressor;
 use crate::io_utils::byte_buffer::ByteBuffer;
 use crate::io_utils::{bytes_to_u64, HUFFMAN_SIGNATURE, LZ77_SIGNATURE};
 use crate::io_utils::path_utils::{get_superpath, is_a_subdirectory};
 
-use crate::compress::huffman::HuffmanDecompressor;
 use crate::compress::lz77::LZ77Decompressor;
 
 pub struct Extractor

@@ -1,12 +1,12 @@
 use std::fs;
 use std::path::Path;
 use crate::archive::archive::archive;
-use crate::compress::huffman::HuffmanCompressor;
 use crate::compress::lz77::LZ77Compressor;
 use crate::io_utils::{byte_writer, get_tmp_file_name};
 
-pub mod huffman;
 pub mod lz77;
+pub mod huffman;
+use crate::compress::huffman::HuffmanCompressor;
 
 #[allow(dead_code)]
 pub enum CompressionMethod
