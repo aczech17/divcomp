@@ -28,7 +28,7 @@ pub fn get_tmp_file_name() -> Result<String, ()>
     for _ in 0..MAX_ATTEMPTS_COUNT
     {
         let filename: String = (0..FILENAME_SIZE)
-            .map(|_| rng.sample(rand::distributions::Alphanumeric))
+            .map(|_| rng.sample(rand::distr::Alphanumeric))
             .map(char::from)
             .collect();
 
