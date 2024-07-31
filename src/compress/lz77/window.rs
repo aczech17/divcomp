@@ -85,41 +85,42 @@ impl Window
         let data = self.data();
         let data = data.as_slice();
 
-        let text_range = 0..self.long_buffer.len();
-        let pattern_range =
-            self.long_buffer.len()..self.long_buffer.len() + self.short_buffer.len();
+        let long_len = self.long_buffer.len();
+        let short_len = self.short_buffer.len();
 
-        if text_range.is_empty()
+        if long_len == 0
         {
-            return (0, 0, data.get(pattern_range.start).cloned());
+            return (0, 0, data.get(0).cloned());
         }
 
-        if pattern_range.len() == 1
+        if short_len == 1
         {
-            return (0, 0, data.get(pattern_range.start).cloned());
+            return (0, 0, data.get(long_len).cloned());
         }
 
-        let pattern_len = pattern_range.end - pattern_range.start;
+        let pattern_start = long_len;
+        let pattern_len = short_len;
 
-        for prefix_len in (1..=pattern_len - 1).rev() // Starting from the longest possible prefix.
+        // Starting from the longest possible prefix. Only proper prefix!
+        for prefix_len in (1..pattern_len).rev()
         {
-            let prefix = &data[pattern_range.start..pattern_range.start + prefix_len];
+            let pattern_prefix = &data[pattern_start .. pattern_start + prefix_len];
 
-            for start_index in (text_range.start..text_range.end).rev() // Looking for the last occurence.
+            for start_index in (0..long_len).rev() // Looking for the last occurence.
             {
                 let potential_match = &data[start_index..start_index + prefix_len];
-                if potential_match == prefix
+                if potential_match == pattern_prefix
                 {
-                    let next_after = data.get(pattern_range.start + prefix_len)
-                        .cloned();
-                    let index = pattern_range.start - start_index;
+                    let next_after = data.get(pattern_start + prefix_len).cloned();
+                    let index = pattern_start - start_index;
 
                     return (index, prefix_len, next_after);
                 }
             }
         }
 
-        let next = data.get(pattern_range.start).cloned();
+        // If not pattern matches, return the next byte after the pattern (maybe none).
+        let next = data.get(pattern_start).cloned();
         (0, 0, next)
     }
 }
