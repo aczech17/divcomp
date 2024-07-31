@@ -6,8 +6,8 @@ use crate::io_utils::byte_writer::ByteWriter;
 use crate::io_utils::LZ77_SIGNATURE;
 use crate::io_utils::universal_reader::UniversalReader;
 
-const LONG_BUFFER_SIZE: usize = 7;
-const SHORT_BUFFER_SIZE: usize = 6;
+const LONG_BUFFER_SIZE: usize = 1 << 15;
+const SHORT_BUFFER_SIZE: usize = 258;
 
 struct Window
 {
@@ -132,6 +132,16 @@ impl Window
 
 pub struct LZ77Compressor;
 
+impl LZ77Compressor
+{
+    fn write_usize_to_file(value: usize, byte_writer: &mut ByteWriter)
+    {
+        let value = value as u16;
+        byte_writer.write_byte((value >> 8) as u8);
+        byte_writer.write_byte((value & 0xFF) as u8);
+    }
+}
+
 impl Compress for LZ77Compressor
 {
     fn compress(&self, input_filename: &str, output_filename: &str) -> Result<(), String>
@@ -158,8 +168,8 @@ impl Compress for LZ77Compressor
             let (offset, match_size, byte_after) =
                 window.find_longest_prefix();
 
-            output.write_byte(offset as u8);
-            output.write_byte(match_size as u8);
+            Self::write_usize_to_file(offset, &mut output);
+            Self::write_usize_to_file(match_size, &mut output);
             window.shift_n_times(match_size + 1);
 
             if let Some(byte) = byte_after
