@@ -1,18 +1,16 @@
+use crate::compress::lz77::{LONG_BUFFER_SIZE, SHORT_BUFFER_SIZE};
 use crate::io_utils::universal_reader::UniversalReader;
 
-const LONG_BUFFER_SIZE: usize = 1 << 15;
-const SHORT_BUFFER_SIZE: usize = 258;
-
-pub struct Window
+pub struct CompressionWindow
 {
     long_buffer: Vec<u8>,
     short_buffer: Vec<u8>,
     file_reader: UniversalReader,
 }
 
-impl Window
+impl CompressionWindow
 {
-    pub fn new(mut file_reader: UniversalReader) -> Window
+    pub fn new(mut file_reader: UniversalReader) -> CompressionWindow
     {
         let mut short_buffer = Vec::new();
         for _ in 0..SHORT_BUFFER_SIZE
@@ -27,7 +25,7 @@ impl Window
             }
         }
 
-        Window
+        CompressionWindow
         {
             long_buffer: Vec::new(),
             short_buffer,
@@ -35,7 +33,7 @@ impl Window
         }
     }
 
-    fn shift(&mut self)
+    fn shift_once(&mut self)
     {
         if self.long_buffer.len() == LONG_BUFFER_SIZE
         {
@@ -53,11 +51,11 @@ impl Window
         }
     }
 
-    pub fn shift_n_times(&mut self, n: usize)
+    pub fn shift(&mut self, n: usize)
     {
         for _ in 0..n
         {
-            self.shift();
+            self.shift_once();
         }
     }
 
