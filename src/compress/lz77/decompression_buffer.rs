@@ -156,6 +156,11 @@ impl DecompressionBuffer
 
         Ok(decompressed_bytes_count)
     }
+
+    pub fn get_data(&self) -> &Vec<u8>
+    {
+        &self.data
+    }
 }
 
 impl Drop for DecompressionBuffer
