@@ -72,7 +72,7 @@ impl DecompressionBuffer
         Ok(bytes)
     }
 
-    fn push_byte(&mut self, value: u8) -> Result<(), DecompressionError>
+    pub(crate) fn push_byte(&mut self, value: u8) -> Result<(), DecompressionError>
     {
         if self.data.len() == BUFFER_SIZE
         {
@@ -119,45 +119,39 @@ impl DecompressionBuffer
 
     /// Given triple (offset, length, byte after) it decompresses some bytes and returns
     /// count of decompressed bytes.
-    pub fn decompress_triple(&mut self, offset: usize, length: usize, byte_after: Option<u8>)
+    pub fn decompress_couple(&mut self, offset: usize, length: usize)
         -> Result<usize, DecompressionError>
     {
-        let mut decompressed_bytes_count = 0;
-
-        if offset > 0
+        if offset == 0
         {
-            let repeats_count = length / offset; // Sequence may be repeated...
-            let reminder = length % offset;      // ...partially
+            return Ok(0);
+        }
 
-            let mut decompressed_bytes = Vec::new();
-            if repeats_count > 0
+        let repeats_count = length / offset; // Sequence may be repeated...
+        let reminder = length % offset;      // ...partially
+
+        let mut decompressed_bytes = Vec::new();
+        if repeats_count > 0
+        {
+            // A sequence is repeated. We copy the buffer from the offset to the end repeatedly
+            // and we join it n times.
+
+            let buffer_part = self.get_bytes(offset, offset)?;
+            for _ in 0..repeats_count
             {
-                // A sequence is repeated. We copy the buffer from the offset to the end repeatedly
-                // and we join it n times.
-
-                let buffer_part = self.get_bytes(offset, offset)?;
-                for _ in 0..repeats_count
-                {
-                    decompressed_bytes.extend(buffer_part.iter().cloned());
-                }
-            }
-
-            let mut buffer_part = self.get_bytes(offset, reminder)?;
-            decompressed_bytes.append(&mut buffer_part);
-
-            // Now we have a bunch of decompressed bytes. Let's push them to the buffer
-            // and count them.
-            decompressed_bytes_count += decompressed_bytes.len();
-            for byte in decompressed_bytes
-            {
-                self.push_byte(byte)?;
+                decompressed_bytes.extend(buffer_part.iter().cloned());
             }
         }
 
-        if let Some(byte) = byte_after
+        let mut buffer_part = self.get_bytes(offset, reminder)?;
+        decompressed_bytes.append(&mut buffer_part);
+
+        // Now we have a bunch of decompressed bytes. Let's push them to the buffer
+        // and count them.
+        let decompressed_bytes_count = decompressed_bytes.len();
+        for byte in decompressed_bytes
         {
             self.push_byte(byte)?;
-            decompressed_bytes_count += 1;
         }
 
         Ok(decompressed_bytes_count)

@@ -86,54 +86,16 @@ impl LZ77Decompressor
         Ok(decompressor)
     }
 
-    // fn load_bytes(&mut self)
-    // {
-    //     //println!("{}", self.bytes_loaded_to_buffer_total);
-    //
-    //     // read offset
-    //     let b1 = self.input.read_byte().unwrap();
-    //     let b2 = self.input.read_byte().unwrap();
-    //     let offset = (((b1 as u16) << 8) | (b2 as u16)) as usize;
-    //
-    //     // println!("offset = {offset}");
-    //
-    //     // read bytes count
-    //     let b1 = self.input.read_byte().unwrap();
-    //     let b2 = self.input.read_byte().unwrap();
-    //     let count = (((b1 as u16) << 8) | (b2 as u16)) as usize;
-    //
-    //     // println!("count = {count}");
-    //
-    //     let byte_after = self.input.read_byte();
-    //
-    //     if offset > 0
-    //     {
-    //         let repeats_count = count / offset;
-    //         let remainder = count % offset;
-    //
-    //         let data_size = self.buffer.len();
-    //         let mut added_bytes = Vec::new();
-    //         for _ in 0..repeats_count
-    //         {
-    //             added_bytes.extend_from_slice(&self.buffer[data_size - offset..]);
-    //         }
-    //         added_bytes.extend_from_slice
-    //         (&self.buffer[data_size - offset .. data_size - offset + remainder]);
-    //
-    //         for byte in added_bytes
-    //         {
-    //             self.push_to_buffer(byte);
-    //         }
-    //     }
-    //
-    //     if let Some(byte) = byte_after
-    //     {
-    //         self.push_to_buffer(byte);
-    //         // println!("{:X}", byte);
-    //     }
-    //
-    //     // println!();
-    // }
+    fn load_u16(&mut self) -> Result<u16, DecompressionError>
+    {
+        let b1 = self.input.read_byte()
+            .ok_or(DecompressionError::Other)?;
+        let b2 = self.input.read_byte()
+            .ok_or(DecompressionError::Other)?;
+
+        let value = ((b1 as u16) << 8) | (b2 as u16);
+        Ok(value)
+    }
 }
 
 impl Decompress for LZ77Decompressor
@@ -152,7 +114,20 @@ impl Decompress for LZ77Decompressor
 
         while bytes_decompressed < count
         {
+            let offset = self.load_u16()? as usize;
+            let length = self.load_u16()? as usize;
 
+            bytes_decompressed += decompression_buffer.decompress_couple(offset, length)
+                .map_err(|_| DecompressionError::Other)?;
+
+            if bytes_decompressed < count
+            {
+                if let Some(byte_after) = self.input.read_byte()
+                {
+                    decompression_buffer.push_byte(byte_after)?;
+                    bytes_decompressed += 1;
+                }
+            }
         }
 
         Ok(())
