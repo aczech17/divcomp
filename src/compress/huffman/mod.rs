@@ -4,7 +4,7 @@ use std::fs::File;
 use crate::compress::byte_writer::ByteWriter;
 use crate::compress::Compress;
 use crate::compress::Decompress;
-use crate::compress::DecompressError;
+use crate::compress::DecompressionError;
 use crate::compress::huffman::tree::HuffmanTree;
 use crate::io_utils::bit_vector::BitVector;
 use crate::io_utils::bit_vector_writer::BitVectorWriter;
@@ -80,7 +80,7 @@ pub struct HuffmanDecompressor
 
 impl HuffmanDecompressor
 {
-    pub fn new(input_file: File) -> Result<HuffmanDecompressor, DecompressError>
+    pub fn new(input_file: File) -> Result<HuffmanDecompressor, DecompressionError>
     {
         let input_file_size = input_file.metadata()
             .unwrap()
@@ -88,14 +88,14 @@ impl HuffmanDecompressor
 
         if input_file_size == 0
         {
-            return Err(DecompressError::EmptyFile);
+            return Err(DecompressionError::EmptyFile);
         }
 
         let mut file_reader = UniversalReader::new(input_file);
 
 
         let huffman_tree = HuffmanTree::from_code(&mut file_reader)
-            .map_err(|_| DecompressError::BadFormat)?;
+            .map_err(|_| DecompressionError::BadFormat)?;
         let dictionary = huffman_tree.get_bytes_encoding();
 
         let decompressor = HuffmanDecompressor
@@ -122,7 +122,7 @@ impl HuffmanDecompressor
         output_filename: Option<String>,
         save_to_memory: bool
     )
-        -> Result<Option<Vec<u8>>, DecompressError>
+        -> Result<Option<Vec<u8>>, DecompressionError>
     {
 
         let mut bytes_decompressed = 0;
@@ -137,7 +137,7 @@ impl HuffmanDecompressor
             Some(filename) =>
                 {
                     let writer = ByteWriter::new(&filename)
-                        .map_err(|_| DecompressError::Other)?;
+                        .map_err(|_| DecompressionError::Other)?;
 
                     Some(writer)
                 }
@@ -149,7 +149,7 @@ impl HuffmanDecompressor
         while bytes_decompressed < bytes_count
         {
             let bit = self.file_reader.read_bit()
-                .ok_or(DecompressError::FileTooShort)?;
+                .ok_or(DecompressionError::FileTooShort)?;
             potential_codeword.push_bit(bit);
 
             if let Some(byte) = self.get_byte_from_codeword(&potential_codeword)
@@ -175,7 +175,7 @@ impl HuffmanDecompressor
 
 impl Decompress for HuffmanDecompressor
 {
-    fn decompress_bytes_to_memory(&mut self, bytes_to_get: usize) -> Result<Vec<u8>, DecompressError>
+    fn decompress_bytes_to_memory(&mut self, bytes_to_get: usize) -> Result<Vec<u8>, DecompressionError>
     {
         let bytes =
             self.decompress_somewhere(bytes_to_get, None, true)?;
@@ -183,14 +183,14 @@ impl Decompress for HuffmanDecompressor
         Ok(bytes.unwrap())
     }
 
-    fn decompress_bytes_to_file(&mut self, output_filename: &str, count: usize) -> Result<(), DecompressError>
+    fn decompress_bytes_to_file(&mut self, output_filename: &str, count: usize) -> Result<(), DecompressionError>
     {
         self.decompress_somewhere(count, Some(output_filename.to_owned()), false)?;
 
         Ok(())
     }
 
-    fn ignore(&mut self, bytes_count: usize) -> Result<(), DecompressError>
+    fn ignore(&mut self, bytes_count: usize) -> Result<(), DecompressionError>
     {
         self.decompress_somewhere(bytes_count, None, false)?;
 

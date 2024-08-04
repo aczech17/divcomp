@@ -15,7 +15,7 @@ pub enum CompressionMethod
 }
 
 #[derive(Debug)]
-pub enum DecompressError
+pub enum DecompressionError
 {
     EmptyFile, BadFormat, FileTooShort, FileOpenError, Other,
 }
@@ -28,10 +28,10 @@ pub trait Compress
 pub trait Decompress
 {
     fn decompress_bytes_to_memory(&mut self, bytes_to_get: usize)
-        -> Result<Vec<u8>, DecompressError>;
+        -> Result<Vec<u8>, DecompressionError>;
     fn decompress_bytes_to_file(&mut self, output_filename: &str, count: usize)
-        -> Result<(), DecompressError>;
-    fn ignore(&mut self, bytes_count: usize) -> Result<(), DecompressError>;
+        -> Result<(), DecompressionError>;
+    fn ignore(&mut self, bytes_count: usize) -> Result<(), DecompressionError>;
 }
 
 pub fn archive_and_compress
@@ -66,13 +66,13 @@ pub fn archive_and_compress
 }
 
 
-pub fn decompress_error_to_string(error: DecompressError) -> String
+pub fn decompress_error_to_string(error: DecompressionError) -> String
 {
     match error
     {
-        DecompressError::BadFormat | DecompressError::EmptyFile | DecompressError::FileTooShort
+        DecompressionError::BadFormat | DecompressionError::EmptyFile | DecompressionError::FileTooShort
         => "Nieprawidłowy plik z archiwum.",
-        DecompressError::FileOpenError => "Nie udało się otworzyć pliku.",
-        DecompressError::Other => "Błąd dekompresji.",
+        DecompressionError::FileOpenError => "Nie udało się otworzyć pliku.",
+        DecompressionError::Other => "Błąd dekompresji.",
     }.to_string()
 }

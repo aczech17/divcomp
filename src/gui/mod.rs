@@ -4,7 +4,10 @@ use std::thread;
 use eframe::egui;
 use crate::archive::{create_extractor_and_execute, display_archive_content, extract_archive};
 use crate::compress::{archive_and_compress, CompressionMethod};
+use crate::compress::CompressionMethod::{HUFFMAN, LZ77};
 use crate::io_utils::path_utils::{parse_paths, sanitize_path};
+
+const METHOD: CompressionMethod = LZ77;
 
 pub struct GUI
 {
@@ -182,7 +185,7 @@ impl eframe::App for GUI
                     thread::spawn(move ||
                     {
                         let status_message = match
-                        archive_and_compress(input_paths, output_path, CompressionMethod::HUFFMAN)
+                        archive_and_compress(input_paths, output_path, METHOD)
                         {
                             Ok(_) => "Spakowano.".to_string(),
                             Err(err_msg) => err_msg,

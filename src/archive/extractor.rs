@@ -5,7 +5,7 @@ use std::path::Path;
 
 use crate::archive::directory_info::DirectoryInfo;
 use crate::compress::Decompress;
-use crate::compress::DecompressError;
+use crate::compress::DecompressionError;
 use crate::compress::huffman::HuffmanDecompressor;
 use crate::io_utils::byte_buffer::ByteBuffer;
 use crate::io_utils::{bytes_to_u64, HUFFMAN_SIGNATURE, LZ77_SIGNATURE};
@@ -21,10 +21,10 @@ pub struct Extractor
 
 impl Extractor
 {
-    pub fn new(archive_filename: String) -> Result<Extractor, DecompressError>
+    pub fn new(archive_filename: String) -> Result<Extractor, DecompressionError>
     {
         let mut archive_file = File::open(archive_filename)
-            .map_err(|_| DecompressError::FileOpenError)?;
+            .map_err(|_| DecompressionError::FileOpenError)?;
 
         // Check signature.
         let huffman_signature: Vec<u8> = HUFFMAN_SIGNATURE.to_be_bytes().to_vec()
@@ -38,7 +38,7 @@ impl Extractor
 
         let mut signature: Vec<u8> = vec![0; huffman_signature.len()];
         archive_file.read(&mut signature)
-            .map_err(|_| DecompressError::FileTooShort)?;
+            .map_err(|_| DecompressionError::FileTooShort)?;
 
 
         let mut decompressor: Box<dyn Decompress> = if signature == huffman_signature
@@ -51,7 +51,7 @@ impl Extractor
         }
         else
         {
-            return Err(DecompressError::BadFormat);
+            return Err(DecompressionError::BadFormat);
         };
 
 
@@ -88,10 +88,10 @@ impl Extractor
         &self.archive_info
     }
 
-    pub fn extract_all(&mut self, output_directory: String) -> Result<(), DecompressError>
+    pub fn extract_all(&mut self, output_directory: String) -> Result<(), DecompressionError>
     {
         create_dir_all(&output_directory)
-            .map_err(|_| DecompressError::Other)?;
+            .map_err(|_| DecompressionError::Other)?;
 
         for (path, size) in &self.archive_info
         {
@@ -119,7 +119,7 @@ impl Extractor
 
             match size
             {
-                None => create_dir(output_path).map_err(|_| DecompressError::Other)?,
+                None => create_dir(output_path).map_err(|_| DecompressionError::Other)?,
                 Some(size) =>
                     self.decompressor.decompress_bytes_to_file(&output_path, *size as usize)?,
             }
@@ -131,10 +131,10 @@ impl Extractor
     }
 
     pub fn extract_paths(&mut self, paths_to_extract: Vec<String>, output_directory: String)
-        -> Result<(), DecompressError>
+        -> Result<(), DecompressionError>
     {
         create_dir_all(&output_directory)
-            .map_err(|_| DecompressError::Other)?;
+            .map_err(|_| DecompressionError::Other)?;
 
         for (path, size) in &self.archive_info
         {
@@ -175,7 +175,7 @@ impl Extractor
                     match size
                     {
                         None => create_dir(&output_path)    // directory
-                            .map_err(|_| DecompressError::Other)?,
+                            .map_err(|_| DecompressionError::Other)?,
 
                         Some(bytes) =>                     // regular file
                             self.decompressor.decompress_bytes_to_file(&output_path, *bytes as usize)?,
