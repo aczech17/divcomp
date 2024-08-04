@@ -117,7 +117,7 @@ impl DecompressionBuffer
         Ok(bytes)
     }
 
-    /// Given triple (offset, length, byte after) it decompresses some bytes and returns
+    /// Given couple (offset, length) it decompresses some bytes and returns
     /// count of decompressed bytes.
     pub fn decompress_couple(&mut self, offset: usize, length: usize)
         -> Result<usize, DecompressionError>
