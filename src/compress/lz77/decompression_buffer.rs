@@ -1,5 +1,6 @@
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
+use std::ops::Range;
 use crate::compress::DecompressionError;
 use crate::compress::lz77::LONG_BUFFER_SIZE;
 
@@ -13,49 +14,76 @@ pub struct DecompressionBuffer
 
 impl DecompressionBuffer
 {
-    pub fn new(output_filename: Option<&str>) -> Result<DecompressionBuffer, DecompressionError>
+    pub fn new() -> Result<DecompressionBuffer, DecompressionError>
     {
-        let file = match output_filename
-        {
-            Some(filename) =>
-            {
-                let file_handle = OpenOptions::new()
-                    .read(true)
-                    .write(true)
-                    .create(true)
-                    .open(filename)
-                    .map_err(|_| DecompressionError::Other)?;
-                Some(file_handle)
-            },
-            None => None,
-        };
-
         let buffer = DecompressionBuffer
         {
             data: Vec::with_capacity(BUFFER_SIZE),
-            output_file: file,
+            output_file: None,
         };
 
         Ok(buffer)
     }
 
-    fn flush(&mut self) -> Result<(), DecompressionError>
+    pub fn set_output_file(&mut self, output_path: Option<&str>) -> Result<(), DecompressionError>
     {
-        // If there is no file to write to, never flush.
+        match output_path
+        {
+            None => self.output_file = None,
+            Some(path) =>
+            {
+                let mut file = OpenOptions::new()
+                    .read(true)
+                    .write(true)
+                    .create(true)
+                    .open(path)
+                    .map_err(|_| DecompressionError::Other)?;
+
+                // Move the file pointer not to read the same data multiple times.
+                // let file_offset = self.data.len() as u64;
+                // println!("ustawiamy na {file_offset}");
+                // file.seek(SeekFrom::Start(file_offset))
+                //     .map_err(|_| DecompressionError::Other)?;
+
+                self.output_file = Some(file);
+            },
+        };
+
+        Ok(())
+    }
+
+    pub fn flush(&mut self, range: Range<usize>) -> Result<(), DecompressionError>
+    {
+        let bytes_to_remove: Vec<u8> = self.data.drain(range).collect(); // Remove bytes from the buffer.
+
+        // If there is a file to write to, write the bytes to it.
         if let Some(file) = &mut self.output_file
         {
-            file.write_all(&self.data)
+            file.write_all(&bytes_to_remove)
                 .map_err(|_| DecompressionError::Other)?;
-            self.data.clear();
         }
 
         Ok(())
     }
 
+    fn flush_all(&mut self) -> Result<(), DecompressionError>
+    {
+        let range = 0..self.data.len();
+        self.flush(range)
+    }
+
     fn read_reversily_from_file(&mut self, offset: usize, length: usize)
         -> Result<Vec<u8>, DecompressionError>
     {
-        let file = self.output_file.as_mut().unwrap(); // We assume there is a file if we call it.
+        let file = match self.output_file.as_mut()
+        {
+            None =>
+            {
+                eprintln!("offset = {offset}, length = {length}, data size= {}", self.data.len());
+                panic!();
+            },
+            Some(f) => f,
+        };
 
         let mut bytes = vec![0; length];
 
@@ -74,9 +102,10 @@ impl DecompressionBuffer
 
     pub(crate) fn push_byte(&mut self, value: u8) -> Result<(), DecompressionError>
     {
-        if self.data.len() == BUFFER_SIZE
+        // If we are writing to memory, don't flush.
+        if !self.output_file.is_none() && self.data.len() == BUFFER_SIZE
         {
-            self.flush()?;
+            self.flush_all()?;
         }
 
         self.data.push(value);
@@ -157,9 +186,19 @@ impl DecompressionBuffer
         Ok(decompressed_bytes_count)
     }
 
+    pub fn get_slice_of_data(&self, range: Range<usize>) -> Vec<u8>
+    {
+        (&self.data[range]).to_vec()
+    }
+
     pub fn get_data(&self) -> &Vec<u8>
     {
         &self.data
+    }
+
+    pub fn bytes_in_buffer(&self) -> usize
+    {
+        self.data.len()
     }
 }
 
@@ -167,7 +206,7 @@ impl Drop for DecompressionBuffer
 {
     fn drop(&mut self)
     {
-        if let Err(_) = self.flush()
+        if let Err(_) = self.flush_all()
         {
             panic!("Could not flush the buffer while decompressing.");
         }

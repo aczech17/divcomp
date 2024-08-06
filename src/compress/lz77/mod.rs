@@ -71,6 +71,7 @@ impl Compress for LZ77Compressor
 pub struct LZ77Decompressor
 {
     input: UniversalReader,
+    decompression_buffer: DecompressionBuffer,
 }
 
 impl LZ77Decompressor
@@ -80,6 +81,7 @@ impl LZ77Decompressor
         let decompressor = LZ77Decompressor
         {
             input: UniversalReader::new(input_file),
+            decompression_buffer: DecompressionBuffer::new()?,
         };
 
         Ok(decompressor)
@@ -96,44 +98,68 @@ impl LZ77Decompressor
         Ok(value)
     }
 
-    fn decompress_bytes_somewhere
+    fn decompress_bytes
     (
         &mut self,
         output_filename: Option<&str>,
         save_to_memory: bool,
-        bytes_count: usize
+        bytes_to_get: usize
     )
         -> Result<Option<Vec<u8>>, DecompressionError>
     {
-        let mut bytes_decompressed = 0;
-        let mut decompression_buffer =
-            DecompressionBuffer::new(output_filename)?;
+        self.decompression_buffer.set_output_file(output_filename)?;
+        println!("ustawiono output");
 
-        while bytes_decompressed < bytes_count
+        let mut bytes_decompressed = self.decompression_buffer.bytes_in_buffer();
+        println!("zdekompresowanych na zapas mamy już {}", bytes_decompressed);
+
+        while bytes_decompressed < bytes_to_get
         {
             let offset = self.load_u16()? as usize;
             let length = self.load_u16()? as usize;
+            println!("offset: {}, length: {}", offset, length);
 
-            bytes_decompressed += decompression_buffer.decompress_couple(offset, length)
-                .map_err(|_| DecompressionError::Other)?;
+            bytes_decompressed += self.decompression_buffer.decompress_couple(offset, length)?;
+            println!("zdekompresowanych: {}", bytes_decompressed);
 
-            if bytes_decompressed < bytes_count
+            if save_to_memory || bytes_decompressed < bytes_to_get
             {
-                if let Some(byte_after) = self.input.read_byte()
-                {
-                    decompression_buffer.push_byte(byte_after)?;
-                    bytes_decompressed += 1;
-                }
+                let byte_after = self.input.read_byte()
+                    .ok_or(DecompressionError::Other)?;
+
+                self.decompression_buffer.push_byte(byte_after)?;
+                bytes_decompressed += 1;
             }
         }
+        println!("zdekompresowanych jest {}", bytes_decompressed);
 
-        let result = match save_to_memory
+        let bytes_returned = match save_to_memory
         {
-            true => Some(decompression_buffer.get_data().clone()),
+            true => Some(self.decompression_buffer.get_slice_of_data(0..bytes_to_get)),
             false => None,
         };
 
-        Ok(result)
+        // If there are bytes remaining, flush bytes for the current file and keep the rest.
+        let rest_count = bytes_decompressed - bytes_to_get;
+        let bytes_to_flush = 0..
+            self.decompression_buffer.bytes_in_buffer() - rest_count;
+        println!("Zostało:");
+        for b in self.decompression_buffer.get_data()//[bytes_to_flush.clone()]
+        {
+            print!("{}", *b as char);
+        }
+        println!();
+
+        self.decompression_buffer.flush(bytes_to_flush)?;
+
+        println!("Po flushu zostało:");
+        for b in self.decompression_buffer.get_data()//[bytes_to_flush.clone()]
+        {
+            print!("{}", *b as char);
+        }
+        println!();
+
+        Ok(bytes_returned)
     }
 }
 
@@ -142,241 +168,62 @@ impl Decompress for LZ77Decompressor
     fn decompress_bytes_to_memory(&mut self, bytes_to_get: usize)
         -> Result<Vec<u8>, DecompressionError>
     {
-        let bytes =
-            self.decompress_bytes_somewhere(None, true, bytes_to_get)?;
+        let bytes = self.decompress_bytes(None, true, bytes_to_get)?;
 
         Ok(bytes.unwrap())
     }
 
-    fn decompress_bytes_to_file(&mut self, output_filename: &str, count: usize)
+    fn decompress_bytes_to_file(&mut self, output_filename: &str, bytes_to_get: usize)
         -> Result<(), DecompressionError>
     {
-        self.decompress_bytes_somewhere(Some(output_filename), false, count)?;
-
+        self.decompress_bytes(Some(output_filename), false, bytes_to_get)?;
         Ok(())
     }
 
     fn ignore(&mut self, bytes_count: usize) -> Result<(), DecompressionError>
     {
-        self.decompress_bytes_somewhere(None, false, bytes_count)?;
-
+        self.decompress_bytes(None, false, bytes_count)?;
         Ok(())
     }
 }
 
-//
-// #[cfg(test)]
-// mod compress_test
-// {
-//     use crate::compress::Compress;
-//     use crate::compress::lz77::LZ77Compressor;
-//
-//     #[test]
-//     fn aaa()
-//     {
-//         let mut compressor = LZ77Compressor;
-//         compressor.compress("test/aaa.txt", "aaa.bin").unwrap();
-//     }
-//
-//     #[test]
-//     fn spoko()
-//     {
-//         let mut compressor = LZ77Compressor;
-//         compressor.compress("test/KOKOKOKOEUROSPOKO.txt", "spoko.bin").unwrap();
-//     }
-//
-//     #[test]
-//     fn tadeusz()
-//     {
-//         let mut compressor = LZ77Compressor;
-//         compressor.compress("test/pan-tadeusz.txt", "tadek.bin").unwrap();
-//     }
-//
-//     #[test]
-//     fn kutas()
-//     {
-//         let mut compressor = LZ77Compressor;
-//         compressor.compress("test/kutas.txt", "kutas.bin").unwrap();
-//     }
-// }
-//
-// #[cfg(test)]
-// mod decompress_test
-// {
-//     use std::fs;
-//     use std::fs::File;
-//     use std::io::Read;
-//     use crate::compress::{Compress, Decompress};
-//     use crate::compress::lz77::{LZ77Compressor, LZ77Decompressor};
-//
-//     #[test]
-//     fn aaa()
-//     {
-//         let mut file = File::open("aaa.bin")
-//             .unwrap();
-//         let mut buffer = [0; 3];
-//         file.read(&mut buffer)
-//             .unwrap();
-//
-//
-//         let mut decompressor = LZ77Decompressor::new(file)
-//             .unwrap();
-//         decompressor.decompress_bytes_to_file("aaa.txt", 16)
-//             .unwrap();
-//     }
-//
-//     #[test]
-//     fn spoko()
-//     {
-//         let mut file = File::open("spoko.bin")
-//             .unwrap();
-//         let mut buffer = [0; 3];
-//         file.read(&mut buffer)
-//             .unwrap();
-//
-//         let size = (fs::metadata("spoko.bin").unwrap().len() - 3) as usize;
-//
-//         let mut decompressor = LZ77Decompressor::new(file)
-//             .unwrap();
-//         decompressor.decompress_bytes_to_file("spoko.txt", 17)
-//             .unwrap();
-//     }
-//
-//     #[test]
-//     fn kutas()
-//     {
-//         let mut file = File::open("kutas.bin")
-//             .unwrap();
-//         let mut buffer = [0; 3];
-//         file.read(&mut buffer)
-//             .unwrap();
-//
-//         let mut decompressor = LZ77Decompressor::new(file)
-//             .unwrap();
-//         decompressor.decompress_bytes_to_file("kutas.txt", 33)
-//             .unwrap();
-//     }
-//
-//     #[test]
-//     fn kutas_mem()
-//     {
-//         let mut file = File::open("kutas.bin")
-//             .unwrap();
-//         let mut buffer = [0; 3];
-//         file.read(&mut buffer)
-//             .unwrap();
-//
-//         let mut decompressor = LZ77Decompressor::new(file)
-//             .unwrap();
-//         let bytes = decompressor.decompress_bytes_to_memory( 33)
-//             .unwrap();
-//
-//         let s = String::from_utf8(bytes)
-//             .unwrap();
-//         println!("{}", s);
-//     }
-// }
-//
-// #[cfg(test)]
-// mod integration_test
-// {
-//     use std::fs;
-//     use std::fs::File;
-//     use std::io::Read;
-//     use crate::compress::{Compress, Decompress};
-//     use crate::compress::lz77::{LZ77Compressor, LZ77Decompressor};
-//     use crate::io_utils::get_tmp_file_name;
-//
-//     fn do_test(filename: &str)
-//     {
-//         let input_file_size = fs::metadata(filename)
-//             .unwrap().len() as usize;
-//
-//         let compressed_file_name = get_tmp_file_name()
-//             .unwrap();
-//
-//         let compressor = LZ77Compressor;
-//         compressor.compress(filename, &compressed_file_name)
-//             .unwrap();
-//         let compressed_file_size = fs::metadata(&compressed_file_name).unwrap()
-//             .len() as usize;
-//
-//
-//         let decompressed_file_name = get_tmp_file_name()
-//             .unwrap();
-//         let mut input_file = File::open(filename)
-//             .unwrap();
-//
-//         let mut signature = [0; 3];
-//         input_file.read(&mut signature)
-//             .unwrap();
-//
-//         let mut decompressor = LZ77Decompressor::new(input_file)
-//             .unwrap();
-//         decompressor.decompress_bytes_to_file(&decompressed_file_name, input_file_size)
-//             .unwrap();
-//
-//         let mut input_file = File::open(filename)
-//             .unwrap();
-//         let file_size = input_file.metadata().unwrap().len() as usize;
-//         let mut decompressed_file = File::open(&decompressed_file_name)
-//             .unwrap();
-//
-//         let mut input_file_content: Vec<u8> = Vec::with_capacity(file_size);
-//         let mut decompressed_file_content: Vec<u8> = Vec::with_capacity(file_size);
-//
-//         input_file.read(&mut input_file_content)
-//             .unwrap();
-//         decompressed_file.read(&mut decompressed_file_content)
-//             .unwrap();
-//
-//         let files_are_equal = input_file_content == decompressed_file_content;
-//
-//         fs::remove_file(&compressed_file_name)
-//             .unwrap();
-//         fs::remove_file(&decompressed_file_name)
-//             .unwrap();
-//
-//         assert!(files_are_equal);
-//     }
-//
-//     #[test]
-//     fn multiple_as()
-//     {
-//         do_test("test/aaa.txt");
-//     }
-//
-//     #[test]
-//     fn KOKOKOKO()
-//     {
-//         do_test("test/KOKOKOKO.txt");
-//     }
-//
-//     #[test]
-//     fn KOKOKOKOEUROSPOKO()
-//     {
-//         do_test("test/KOKOKOKOEUROSPOKO.txt")
-//     }
-//
-//     #[test]
-//     fn KOKOKOKOEE()
-//     {
-//         do_test("test/KOKOKOKOEE.txt");
-//     }
-//
-//     #[test]
-//     fn KOKOKOKOEEE()
-//     {
-//         do_test("test/KOKOKOKOEEE.txt");
-//     }
-//
-//     // #[test]
-//     // fn test1()
-//     // {
-//     //     let compressor = LZ77Compressor;
-//     //     compressor.compress("test1.txt", "output.bin").
-//     //         unwrap();
-//     //
-//     //     assert_eq!(1, 1);
-//     // }
-// }
+#[cfg(test)]
+mod test
+{
+    use std::fs::File;
+    use std::io::Read;
+    use crate::compress::{Compress, Decompress};
+    use crate::compress::lz77::{LZ77Compressor, LZ77Decompressor};
+
+    #[test]
+    fn test1()
+    {
+        {
+            let compressor = LZ77Compressor;
+            compressor.compress("test/papież.txt", "koko.bin").unwrap();
+        }
+
+        let mut file = File::open("koko.bin")
+            .unwrap();
+        let mut signature = [0; 3];
+        file.read_exact(&mut signature)
+            .unwrap();
+
+        let mut decompressor  = LZ77Decompressor::new(file).unwrap();
+        let content = decompressor.decompress_bytes_to_memory(2)
+            .unwrap();
+
+        println!("otrzymaliśmy bajty: ");
+        for byte in content
+        {
+            print!("{}", byte as char);
+        }
+        println!();
+
+        decompressor.decompress_bytes_to_file("file", 5)
+            .unwrap();
+        decompressor.decompress_bytes_to_file("file2", 3).unwrap();
+        decompressor.decompress_bytes_to_file("file3", 2).unwrap();
+        decompressor.decompress_bytes_to_file("file4", 2).unwrap();
+    }
+}
