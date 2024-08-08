@@ -5,6 +5,7 @@ use crate::io_utils::get_tmp_file_name;
 use std::fs::OpenOptions;
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::ops::Range;
+use std::path::Path;
 
 const BUFFER_SIZE: usize = 2 * LONG_BUFFER_SIZE;
 
@@ -29,7 +30,6 @@ impl DecompressionBuffer
             buffer_size_total: 0,
         };
 
-        println!("New decompression buffer");
         Ok(buffer)
     }
 
@@ -158,8 +158,11 @@ impl Drop for DecompressionBuffer
 {
     fn drop(&mut self)
     {
-        fs::remove_file(&self.reserve_buffer_name)
-            .expect("Could not remove temporary reserve file for the buffer.");
+        if Path::new(&self.reserve_buffer_name).exists()
+        {
+            fs::remove_file(&self.reserve_buffer_name)
+                .expect("Could not remove temporary reserve file for the buffer.");
+        }
     }
 }
 
