@@ -29,6 +29,7 @@ impl DecompressionBuffer
             buffer_size_total: 0,
         };
 
+        println!("New decompression buffer");
         Ok(buffer)
     }
 
@@ -66,7 +67,10 @@ impl DecompressionBuffer
         decompressed_bytes.append(&mut reminder_buffer_part);
 
         // Now we have a bunch of decompressed bytes. Let's push them to the buffer.
-        self.memory.extend(decompressed_bytes);
+        for byte in decompressed_bytes
+        {
+            self.push_byte(byte);
+        }
 
         Ok(())
     }
