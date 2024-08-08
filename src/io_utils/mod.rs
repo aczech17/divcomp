@@ -14,6 +14,12 @@ pub const LZ77_SIGNATURE: u64 = 0xAEFE77;
 
 pub fn bytes_to_u64(bytes: Vec<u8>) -> u64
 {
+    if bytes.len() != 8
+    {
+        eprintln!("bytes.len == {}", bytes.len());
+        panic!("Chujina");
+    }
+
     let buffer: [u8; 8] = bytes.try_into().unwrap();
     u64::from_be_bytes(buffer)
 }

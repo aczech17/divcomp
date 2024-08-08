@@ -1,13 +1,12 @@
-use std::fs;
-use crate::compress::lz77::LONG_BUFFER_SIZE;
 use crate::compress::DecompressionError;
 use crate::io_utils::get_tmp_file_name;
+use std::fs;
 use std::fs::OpenOptions;
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::ops::Range;
 use std::path::Path;
 
-const BUFFER_SIZE: usize = 2 * LONG_BUFFER_SIZE;
+const BUFFER_SIZE: usize = 1 << 27;
 
 pub struct DecompressionBuffer
 {
@@ -52,7 +51,9 @@ impl DecompressionBuffer
             // A sequence is repeated. We copy the buffer from the offset to the end repeatedly
             // and we join it n times.
 
-            let repeated_buffer_part = &self.memory[self.memory.len() - offset..];
+            let repeated_buffer_part =
+                self.get_slice_of_data(self.buffer_size_total - offset..self.buffer_size_total);
+            //let repeated_buffer_part = &self.memory[self.memory.len() - offset..];
             for _ in 0..repeats_count
             {
                 decompressed_bytes.extend(repeated_buffer_part.iter().cloned());
@@ -60,10 +61,10 @@ impl DecompressionBuffer
         }
 
         // Now decompress the reminder part.
-        let reminder_range_start = self.memory.len() - offset;
+        let reminder_range_start = self.buffer_size_total - offset;
         let reminder_range_stop = reminder_range_start + reminder;
         let reminder_range = reminder_range_start..reminder_range_stop;
-        let mut reminder_buffer_part = (&self.memory[reminder_range]).to_vec();
+        let mut reminder_buffer_part = self.get_slice_of_data(reminder_range);
         decompressed_bytes.append(&mut reminder_buffer_part);
 
         // Now we have a bunch of decompressed bytes. Let's push them to the buffer.
@@ -80,9 +81,9 @@ impl DecompressionBuffer
         if self.memory.len() == BUFFER_SIZE
         {
             let mut reserve_file = OpenOptions::new()
+                .create(true)
                 .write(true)
                 .append(true)
-                .create(true)
                 .open(&self.reserve_buffer_name)
                 .expect("Could not open the reserve file.");
 
@@ -96,24 +97,20 @@ impl DecompressionBuffer
         self.buffer_size_total += 1;
     }
 
-    fn read_data_from_reserve_file(&self, offset_from_end: usize, length: usize) -> Vec<u8>
+    fn read_data_from_reserve_file(&self, offset_from_end: i64, length: usize) -> Vec<u8>
     {
         let mut file = OpenOptions::new()
             .read(true)
-            .write(false)
+            .write(true)
             .create(false)
             .open(&self.reserve_buffer_name)
             .expect("Could not read from the reserve file.");
 
         let mut data = vec![0; length];
 
-        let file_offset = -(offset_from_end as i64);
-        file.seek(SeekFrom::End(file_offset))
+        file.seek(SeekFrom::End(-offset_from_end))
             .unwrap();
-
-        file.read_exact(&mut data)
-            .unwrap();
-
+        file.read_exact(&mut data).unwrap();
         file.seek(SeekFrom::End(0))
             .unwrap();
 
@@ -123,28 +120,38 @@ impl DecompressionBuffer
     pub fn get_slice_of_data(&self, range: Range<usize>) -> Vec<u8>
     {
         let start = range.start;
-        let bytes_in_file = self.buffer_size_total - self.memory.len();
+        let length = range.len();
 
-        if bytes_in_file == 0 // All data is in the memory.
+        let bytes_in_memory = self.memory.len();
+        let bytes_in_file = self.buffer_size_total - bytes_in_memory;
+
+        let offset_in_file = (bytes_in_file as i64) - (start as i64);
+
+        if offset_in_file <= 0 // All the needed data is in the memory.
         {
-            return (&self.memory[range]).to_vec();
+            let memory_start = start - bytes_in_file;
+            let memory_end = memory_start + length;
+
+            let data = (&self.memory[memory_start..memory_end]).to_vec();
+            return data;
         }
 
-        let offset_in_file = bytes_in_file - start;
-        if range.len() <= offset_in_file // All data is in the file.
+        if length <= offset_in_file as usize // All the needed data is in the file.
         {
-            return self.read_data_from_reserve_file(offset_in_file, range.len());
+            return self.read_data_from_reserve_file(offset_in_file, length);
         }
 
-        // Data is partially in the file, partially in the memory.
+        // The data is partially in the file and partially in the memory.
 
-        // Read the file till the end.
-        let length_in_file = offset_in_file;
+        // Read the file to the end.
+        let length_in_file = offset_in_file as usize;
         let data_from_file = self.read_data_from_reserve_file(offset_in_file, length_in_file);
 
-        let length_in_memory = range.len() - length_in_file;
+        // Read the rest of the data from the memory.
+        let length_in_memory = length - length_in_file;
         let data_from_memory = (&self.memory[0..length_in_memory]).to_vec();
 
+        // Join the 2 parts and return.
         [data_from_file, data_from_memory].concat()
     }
 
