@@ -8,7 +8,7 @@ pub mod lz77;
 pub mod huffman;
 use crate::compress::huffman::HuffmanCompressor;
 
-#[allow(dead_code)]
+#[derive(Clone, Copy, PartialEq)]
 pub enum CompressionMethod
 {
     HUFFMAN, LZ77,
