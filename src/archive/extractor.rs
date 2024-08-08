@@ -1,15 +1,14 @@
 use std::fs::{create_dir, create_dir_all, File};
-use std::io;
-use std::io::{Read, Write};
+use std::io::Read;
 use std::path::Path;
 
 use crate::archive::directory_info::DirectoryInfo;
+use crate::compress::huffman::HuffmanDecompressor;
 use crate::compress::Decompress;
 use crate::compress::DecompressionError;
-use crate::compress::huffman::HuffmanDecompressor;
 use crate::io_utils::byte_buffer::ByteBuffer;
-use crate::io_utils::{bytes_to_u64, HUFFMAN_SIGNATURE, LZ77_SIGNATURE};
 use crate::io_utils::path_utils::{get_superpath, is_a_subdirectory};
+use crate::io_utils::{bytes_to_u64, HUFFMAN_SIGNATURE, LZ77_SIGNATURE};
 
 use crate::compress::lz77::LZ77Decompressor;
 
@@ -103,19 +102,12 @@ impl Extractor
 
             if Path::new(&output_path).exists()
             {
-                print!("{} already exists, skipping...", output_path);
-                io::stdout().flush().unwrap();
-
                 if let Some(bytes_count) = size
                 {
                     self.decompressor.ignore(*bytes_count as usize)?;
                 }
-                println!();
                 continue;
             }
-
-            print!("{}... ", path);
-            io::stdout().flush().unwrap();
 
             match size
             {
@@ -123,8 +115,6 @@ impl Extractor
                 Some(size) =>
                     self.decompressor.decompress_bytes_to_file(&output_path, *size as usize)?,
             }
-
-            println!("extracted.");
         }
 
         Ok(())
@@ -166,9 +156,6 @@ impl Extractor
 
                     if Path::new(&output_path).exists()
                     {
-                        println!("Path {} exists. Skipping.", path_to_extract);
-                        io::stdout().flush().unwrap();
-
                         continue;
                     }
 

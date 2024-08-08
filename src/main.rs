@@ -1,4 +1,4 @@
-#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide a console window on Windows in release
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide the console window
 
 mod io_utils;
 mod archive;
