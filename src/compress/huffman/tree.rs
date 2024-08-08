@@ -1,8 +1,8 @@
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap};
 use std::fs::File;
-use crate::compress::universal_reader::UniversalReader;
 use crate::io_utils::bit_vector::BitVector;
+use crate::io_utils::universal_reader::UniversalReader;
 
 #[derive(Clone, Eq, PartialEq)]
 struct Node
@@ -100,7 +100,7 @@ impl HuffmanTree
     }
 
     fn recreate_from_code_recursive(file_reader: &mut UniversalReader, node: &mut Node)
-        -> Result<(), ()>
+                                    -> Result<(), ()>
     {
         let bit = match file_reader.read_bit()
         {
@@ -162,7 +162,7 @@ impl HuffmanTree
 
         let flat_node_vector: Vec<Node> = frequency_map
             .iter().map(|(&byte, &freq)|
-            Node::new(byte, freq))
+        Node::new(byte, freq))
             .collect();
 
         flat_node_vector
@@ -218,7 +218,7 @@ impl HuffmanTree
     }
 
     fn make_bytes_encoding_recursive
-        (&self, node: &Node, code: &mut BitVector, codes: &mut HashMap<u8, BitVector>)
+    (&self, node: &Node, code: &mut BitVector, codes: &mut HashMap<u8, BitVector>)
     {
         if let (Some(left_node), Some(right_node)) =
             (&node.left, &node.right)
@@ -242,3 +242,4 @@ impl HuffmanTree
         self.head.is_none()
     }
 }
+

@@ -3,11 +3,14 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use eframe::egui;
 use crate::archive::{create_extractor_and_execute, display_archive_content, extract_archive};
-use crate::compress::compress::archive_and_compress;
-use crate::io_utils::{parse_paths, sanitize_path};
+use crate::compress::{archive_and_compress, CompressionMethod};
+use crate::compress::CompressionMethod::{HUFFMAN, LZ77};
+use crate::io_utils::path_utils::{parse_paths, sanitize_path};
 
 pub struct GUI
 {
+    compression_method: CompressionMethod,
+
     input_archive_path_input: String,
     choose_files_to_extract_input: String,
     output_directory_input: String,
@@ -30,6 +33,7 @@ impl Default for GUI
     {
         Self
         {
+            compression_method: HUFFMAN,
             input_archive_path_input: String::new(),
             choose_files_to_extract_input: String::new(),
             output_directory_input: String::new(),
@@ -179,9 +183,11 @@ impl eframe::App for GUI
                     self.status_display = String::from("Pakowanie...");
                     let result = Arc::clone(&self.status_display_result);
 
+                    let compression_method = self.compression_method;
                     thread::spawn(move ||
                     {
-                        let status_message = match archive_and_compress(input_paths, output_path)
+                        let status_message = match
+                        archive_and_compress(input_paths, output_path, compression_method)
                         {
                             Ok(_) => "Spakowano.".to_string(),
                             Err(err_msg) => err_msg,
@@ -193,6 +199,16 @@ impl eframe::App for GUI
 
                     self.processing = false;
                 }
+
+                ui.vertical(|ui|
+                {
+                    ui.label("Wybierz metodę kompresji:");
+                    ui.horizontal(|ui|
+                    {
+                        ui.radio_value(&mut self.compression_method, HUFFMAN, "Huffman");
+                        ui.radio_value(&mut self.compression_method, LZ77, "LZ77");
+                    });
+                });
             });
 
             ui.horizontal(|ui|

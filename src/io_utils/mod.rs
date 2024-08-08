@@ -9,7 +9,8 @@ pub mod bit_vector;
 pub mod bit_vector_writer;
 pub mod path_utils;
 
-pub const SIGNATURE: u64 = 0xAEF17E;
+pub const HUFFMAN_SIGNATURE: u64 = 0xAEFE48;
+pub const LZ77_SIGNATURE: u64 = 0xAEFE77;
 
 pub fn bytes_to_u64(bytes: Vec<u8>) -> u64
 {
@@ -27,7 +28,7 @@ pub fn get_tmp_file_name() -> Result<String, ()>
     for _ in 0..MAX_ATTEMPTS_COUNT
     {
         let filename: String = (0..FILENAME_SIZE)
-            .map(|_| rng.sample(rand::distributions::Alphanumeric))
+            .map(|_| rng.sample(rand::distr::Alphanumeric))
             .map(char::from)
             .collect();
 
@@ -49,36 +50,3 @@ pub fn get_memory_buffers_size() -> usize
     (total_memory / 16) as usize
 }
 
-pub fn sanitize_path(path: &String) -> String
-{
-    let mut path = path.replace("\\", "/")
-        .replace("\"", "");
-    if path.ends_with('/')
-    {
-        path.pop();
-    }
-
-    path
-}
-
-fn sanitize_all_paths(paths: Vec<String>) -> Vec<String>
-{
-    let mut paths: Vec<String> = paths.iter()
-        .map(|path| sanitize_path(path))
-        .collect();
-
-    paths.sort();
-    paths.dedup();
-
-    paths
-}
-
-pub fn parse_paths(text: &str) -> Vec<String>
-{
-    let paths: Vec<String> = text
-        .lines()
-        .map(|line| line.to_string())
-        .collect();
-
-    sanitize_all_paths(paths)
-}
