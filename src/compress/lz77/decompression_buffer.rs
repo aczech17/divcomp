@@ -1,7 +1,7 @@
 use crate::compress::DecompressionError;
 use crate::io_utils::get_tmp_file_name;
 use std::fs;
-use std::fs::OpenOptions;
+use std::fs::{File, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::ops::Range;
 use std::path::Path;
@@ -155,9 +155,32 @@ impl DecompressionBuffer
         [data_from_file, data_from_memory].concat()
     }
 
-    pub fn buffer_size_total(&self) -> usize
+    pub fn write_bytes_to_file(&self, range: Range<usize>, output_filename: &str)
+        -> Result<(), DecompressionError>
     {
-        self.buffer_size_total
+        let start = range.start;
+        let length = range.len();
+
+        let mut file = File::create(output_filename)
+            .map_err(|_| DecompressionError::FileCreationError)?;
+
+        let iterations = length / BUFFER_SIZE;
+        for i in 0..iterations
+        {
+            let from = start + i * BUFFER_SIZE;
+            let to = from + BUFFER_SIZE;
+            let portion = self.get_slice_of_data(from..to);
+
+            file.write_all(&portion)
+                .map_err(|_| DecompressionError::Other)?;
+        }
+
+        let from = start + iterations * BUFFER_SIZE;
+        let to = range.end;
+        let portion = self.get_slice_of_data(from..to);
+
+        file.write_all(&portion)
+            .map_err(|_| DecompressionError::Other)
     }
 }
 

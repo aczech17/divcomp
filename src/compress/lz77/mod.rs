@@ -119,10 +119,9 @@ impl Decompress for LZ77Decompressor
     fn decompress_bytes_to_memory(&mut self, bytes_to_get: usize)
         -> Result<Vec<u8>, DecompressionError>
     {
-        let bytes_range = self.bytes_decompressed..
-            self.bytes_decompressed + bytes_to_get;
+        let range = self.bytes_decompressed..self.bytes_decompressed + bytes_to_get;
 
-        let bytes = self.decompression_buffer.get_slice_of_data(bytes_range);
+        let bytes = self.decompression_buffer.get_slice_of_data(range);
         self.bytes_decompressed += bytes_to_get;
 
         Ok(bytes)
@@ -131,15 +130,9 @@ impl Decompress for LZ77Decompressor
     fn decompress_bytes_to_file(&mut self, output_filename: &str, bytes_to_get: usize)
         -> Result<(), DecompressionError>
     {
-        let bytes = self.decompress_bytes_to_memory(bytes_to_get)?;
-
-        let mut output = ByteWriter::new(output_filename)
-            .map_err(|_| DecompressionError::Other)?;
-
-        for byte in bytes
-        {
-            output.write_byte(byte);
-        }
+        let range = self.bytes_decompressed..self.bytes_decompressed + bytes_to_get;
+        self.decompression_buffer.write_bytes_to_file(range, output_filename)?;
+        self.bytes_decompressed += bytes_to_get;
 
         Ok(())
     }

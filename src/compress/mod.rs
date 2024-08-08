@@ -17,7 +17,7 @@ pub enum CompressionMethod
 #[derive(Debug)]
 pub enum DecompressionError
 {
-    EmptyFile, BadFormat, FileTooShort, FileOpenError, Other,
+    EmptyFile, BadFormat, FileTooShort, FileOpenError, FileCreationError, Other,
 }
 
 pub trait Compress
@@ -73,6 +73,7 @@ pub fn decompress_error_to_string(error: DecompressionError) -> String
         DecompressionError::BadFormat | DecompressionError::EmptyFile | DecompressionError::FileTooShort
         => "Nieprawidłowy plik z archiwum.",
         DecompressionError::FileOpenError => "Nie udało się otworzyć pliku.",
+        DecompressionError::FileCreationError => "Nie udało się utworzyć pliku.",
         DecompressionError::Other => "Błąd dekompresji.",
     }.to_string()
 }
