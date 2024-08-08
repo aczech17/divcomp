@@ -71,7 +71,6 @@ impl Compress for LZ77Compressor
 pub struct LZ77Decompressor
 {
     decompression_buffer: DecompressionBuffer,
-    bytes_decompressed: usize,
 }
 
 impl LZ77Decompressor
@@ -98,7 +97,6 @@ impl LZ77Decompressor
         let decompressor = LZ77Decompressor
         {
             decompression_buffer,
-            bytes_decompressed: 0,
         };
 
         Ok(decompressor)
@@ -119,12 +117,10 @@ impl Decompress for LZ77Decompressor
     fn decompress_bytes_to_memory(&mut self, bytes_to_get: usize)
         -> Result<Vec<u8>, DecompressionError>
     {
-        let bytes_range = self.bytes_decompressed..
-            self.bytes_decompressed + bytes_to_get;
+        let bytes_decompressed = self.decompression_buffer.buffer_size_total();
+        let bytes_range = bytes_decompressed..bytes_decompressed + bytes_to_get;
 
         let bytes = self.decompression_buffer.get_slice_of_data(bytes_range);
-        self.bytes_decompressed += bytes_to_get;
-
         Ok(bytes)
     }
 
