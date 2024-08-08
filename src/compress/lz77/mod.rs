@@ -11,7 +11,7 @@ use crate::io_utils::byte_writer::ByteWriter;
 use crate::io_utils::LZ77_SIGNATURE;
 use crate::io_utils::universal_reader::UniversalReader;
 
-const LONG_BUFFER_SIZE: usize = 1 << 15;
+const LONG_BUFFER_SIZE: usize = 1 << 16;
 const SHORT_BUFFER_SIZE: usize = 258;
 
 pub struct LZ77Compressor;
@@ -70,96 +70,47 @@ impl Compress for LZ77Compressor
 
 pub struct LZ77Decompressor
 {
-    input: UniversalReader,
     decompression_buffer: DecompressionBuffer,
+    bytes_decompressed: usize,
 }
 
 impl LZ77Decompressor
 {
     pub fn new(input_file: File) -> Result<Self, DecompressionError>
     {
+        let mut input = UniversalReader::new(input_file);
+        let mut decompression_buffer = DecompressionBuffer::new()?;
+
+        while let Some(offset) = Self::load_u16(&mut input)
+        {
+            let offset = offset as usize;
+            let length = Self::load_u16(&mut input).unwrap() as usize;
+
+            decompression_buffer.decompress_couple(offset, length)?;
+
+            match input.read_byte()
+            {
+                Some(byte_after) => decompression_buffer.push_byte(byte_after),
+                None => break,
+            };
+        }
+
         let decompressor = LZ77Decompressor
         {
-            input: UniversalReader::new(input_file),
-            decompression_buffer: DecompressionBuffer::new()?,
+            decompression_buffer,
+            bytes_decompressed: 0,
         };
 
         Ok(decompressor)
     }
 
-    fn load_u16(&mut self) -> Result<u16, DecompressionError>
+    fn load_u16(input: &mut UniversalReader) -> Option<u16>
     {
-        let b1 = self.input.read_byte()
-            .ok_or(DecompressionError::Other)?;
-        let b2 = self.input.read_byte()
-            .ok_or(DecompressionError::Other)?;
+        let b1 = input.read_byte()?;
+        let b2 = input.read_byte()?;
 
         let value = ((b1 as u16) << 8) | (b2 as u16);
-        Ok(value)
-    }
-
-    fn decompress_bytes
-    (
-        &mut self,
-        output_filename: Option<&str>,
-        save_to_memory: bool,
-        bytes_to_get: usize
-    )
-        -> Result<Option<Vec<u8>>, DecompressionError>
-    {
-        self.decompression_buffer.set_output_file(output_filename)?;
-        println!("ustawiono output");
-
-        let mut bytes_decompressed = self.decompression_buffer.bytes_in_buffer();
-        println!("zdekompresowanych na zapas mamy już {}", bytes_decompressed);
-
-        while bytes_decompressed < bytes_to_get
-        {
-            let offset = self.load_u16()? as usize;
-            let length = self.load_u16()? as usize;
-            println!("offset: {}, length: {}", offset, length);
-
-            bytes_decompressed += self.decompression_buffer.decompress_couple(offset, length)?;
-            println!("zdekompresowanych: {}", bytes_decompressed);
-
-            if save_to_memory || bytes_decompressed < bytes_to_get
-            {
-                let byte_after = self.input.read_byte()
-                    .ok_or(DecompressionError::Other)?;
-
-                self.decompression_buffer.push_byte(byte_after)?;
-                bytes_decompressed += 1;
-            }
-        }
-        println!("zdekompresowanych jest {}", bytes_decompressed);
-
-        let bytes_returned = match save_to_memory
-        {
-            true => Some(self.decompression_buffer.get_slice_of_data(0..bytes_to_get)),
-            false => None,
-        };
-
-        // If there are bytes remaining, flush bytes for the current file and keep the rest.
-        let rest_count = bytes_decompressed - bytes_to_get;
-        let bytes_to_flush = 0..
-            self.decompression_buffer.bytes_in_buffer() - rest_count;
-        println!("Zostało:");
-        for b in self.decompression_buffer.get_data()//[bytes_to_flush.clone()]
-        {
-            print!("{}", *b as char);
-        }
-        println!();
-
-        self.decompression_buffer.flush(bytes_to_flush)?;
-
-        println!("Po flushu zostało:");
-        for b in self.decompression_buffer.get_data()//[bytes_to_flush.clone()]
-        {
-            print!("{}", *b as char);
-        }
-        println!();
-
-        Ok(bytes_returned)
+        Some(value)
     }
 }
 
@@ -168,62 +119,35 @@ impl Decompress for LZ77Decompressor
     fn decompress_bytes_to_memory(&mut self, bytes_to_get: usize)
         -> Result<Vec<u8>, DecompressionError>
     {
-        let bytes = self.decompress_bytes(None, true, bytes_to_get)?;
+        let bytes_range = self.bytes_decompressed..
+            self.bytes_decompressed + bytes_to_get;
 
-        Ok(bytes.unwrap())
+        let bytes = self.decompression_buffer.get_slice_of_data(bytes_range);
+        self.bytes_decompressed += bytes_to_get;
+
+        Ok(bytes)
     }
 
     fn decompress_bytes_to_file(&mut self, output_filename: &str, bytes_to_get: usize)
         -> Result<(), DecompressionError>
     {
-        self.decompress_bytes(Some(output_filename), false, bytes_to_get)?;
+        let bytes = self.decompress_bytes_to_memory(bytes_to_get)?;
+
+        let mut output = ByteWriter::new(output_filename)
+            .map_err(|_| DecompressionError::Other)?;
+
+        for byte in bytes
+        {
+            output.write_byte(byte);
+        }
+
         Ok(())
     }
 
     fn ignore(&mut self, bytes_count: usize) -> Result<(), DecompressionError>
     {
-        self.decompress_bytes(None, false, bytes_count)?;
+        let _ignored_data = self.decompress_bytes_to_memory(bytes_count)?;
+
         Ok(())
-    }
-}
-
-#[cfg(test)]
-mod test
-{
-    use std::fs::File;
-    use std::io::Read;
-    use crate::compress::{Compress, Decompress};
-    use crate::compress::lz77::{LZ77Compressor, LZ77Decompressor};
-
-    #[test]
-    fn test1()
-    {
-        {
-            let compressor = LZ77Compressor;
-            compressor.compress("test/papież.txt", "koko.bin").unwrap();
-        }
-
-        let mut file = File::open("koko.bin")
-            .unwrap();
-        let mut signature = [0; 3];
-        file.read_exact(&mut signature)
-            .unwrap();
-
-        let mut decompressor  = LZ77Decompressor::new(file).unwrap();
-        let content = decompressor.decompress_bytes_to_memory(2)
-            .unwrap();
-
-        println!("otrzymaliśmy bajty: ");
-        for byte in content
-        {
-            print!("{}", byte as char);
-        }
-        println!();
-
-        decompressor.decompress_bytes_to_file("file", 5)
-            .unwrap();
-        decompressor.decompress_bytes_to_file("file2", 3).unwrap();
-        decompressor.decompress_bytes_to_file("file3", 2).unwrap();
-        decompressor.decompress_bytes_to_file("file4", 2).unwrap();
     }
 }

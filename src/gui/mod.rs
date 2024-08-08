@@ -7,7 +7,7 @@ use crate::compress::{archive_and_compress, CompressionMethod};
 use crate::compress::CompressionMethod::{HUFFMAN, LZ77};
 use crate::io_utils::path_utils::{parse_paths, sanitize_path};
 
-const METHOD: CompressionMethod = LZ77;
+const METHOD: CompressionMethod = HUFFMAN;
 
 pub struct GUI
 {
