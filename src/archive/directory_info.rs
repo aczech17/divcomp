@@ -28,6 +28,11 @@ impl FilesystemEntryInfo
             .unwrap()
             .to_string();
 
+        // Remove the initial slash if any.
+        let path = path.strip_prefix('/')
+            .unwrap_or(&path)
+            .to_string();
+
         FilesystemEntryInfo
         {
             path,
