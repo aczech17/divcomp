@@ -1,6 +1,3 @@
-use std::env;
-use std::path::Path;
-use rand::Rng;
 use sysinfo::System;
 
 pub mod byte_writer;
@@ -23,46 +20,6 @@ pub fn bytes_to_u64(bytes: Vec<u8>) -> u64
 
     let buffer: [u8; 8] = bytes.try_into().unwrap();
     u64::from_be_bytes(buffer)
-}
-
-fn get_working_directory() -> String
-{
-    if cfg!(unix)
-    {
-        let username = env::var("USER").or_else(|_| env::var("LOGNAME")).unwrap();
-        format!("/home/{username}")
-    }
-    else
-    {
-        let username = env::var("USERNAME").unwrap();
-        format!("C:/Users/{username}")
-    }
-}
-
-pub fn get_tmp_file_path(extension: &str) -> Option<String>
-{
-    let working_directory = get_working_directory();
-
-    const FILENAME_SIZE: usize = 10;
-    const MAX_ATTEMPTS_COUNT: usize = 10;
-
-    let mut rng = rand::thread_rng();
-
-    for _ in 0..MAX_ATTEMPTS_COUNT
-    {
-        let filename: String = (0..FILENAME_SIZE)
-            .map(|_| rng.sample(rand::distr::Alphanumeric))
-            .map(char::from)
-            .collect();
-        let path = format!("{working_directory}/{filename}{extension}");
-
-        if !Path::new(&path).exists()
-        {
-            return Some(path);
-        }
-    }
-
-    None
 }
 
 pub fn get_memory_buffers_size() -> usize

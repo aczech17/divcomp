@@ -1,10 +1,10 @@
 use crate::compress::DecompressionError;
-use crate::io_utils::get_tmp_file_path;
 use std::fs;
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::ops::Range;
 use std::path::Path;
+use crate::io_utils::path_utils::get_tmp_file_path;
 
 const BUFFER_SIZE: usize = 1 << 27;
 

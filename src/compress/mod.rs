@@ -2,11 +2,12 @@ use std::fs;
 use std::path::Path;
 use crate::archive::archive::archive;
 use crate::compress::lz77::LZ77Compressor;
-use crate::io_utils::{byte_writer, get_tmp_file_path};
+use crate::io_utils::byte_writer;
 
 pub mod lz77;
 pub mod huffman;
 use crate::compress::huffman::HuffmanCompressor;
+use crate::io_utils::path_utils::get_tmp_file_path;
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum CompressionMethod

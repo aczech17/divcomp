@@ -1,3 +1,7 @@
+use std::env;
+use std::path::Path;
+use rand::Rng;
+
 const ARCHIVE_EXTENSION: &str = ".xca";
 
 pub fn is_a_subdirectory(superpath: &str, subpath: &str) -> bool
@@ -76,3 +80,35 @@ pub fn parse_paths(text: &str) -> Vec<String>
 }
 
 
+pub fn get_tmp_file_path(extension: &str) -> Option<String>
+{
+    let tmp_directory = if cfg!(unix)
+    {
+        "/tmp".to_string()
+    }
+    else
+    {
+        env::var("TEMP").unwrap()
+    };
+
+    const FILENAME_SIZE: usize = 10;
+    const MAX_ATTEMPTS_COUNT: usize = 10;
+
+    let mut rng = rand::thread_rng();
+
+    for _ in 0..MAX_ATTEMPTS_COUNT
+    {
+        let filename: String = (0..FILENAME_SIZE)
+            .map(|_| rng.sample(rand::distr::Alphanumeric))
+            .map(char::from)
+            .collect();
+        let path = format!("{tmp_directory}/{filename}{extension}");
+
+        if !Path::new(&path).exists()
+        {
+            return Some(path);
+        }
+    }
+
+    None
+}
