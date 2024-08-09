@@ -82,7 +82,6 @@ impl DecompressionBuffer
         {
             let mut reserve_file = OpenOptions::new()
                 .create(true)
-                .write(true)
                 .append(true)
                 .open(&self.reserve_buffer_name)
                 .expect("Could not open the reserve file.");
@@ -132,7 +131,7 @@ impl DecompressionBuffer
             let memory_start = start - bytes_in_file;
             let memory_end = memory_start + length;
 
-            let data = (&self.memory[memory_start..memory_end]).to_vec();
+            let data = self.memory[memory_start..memory_end].to_vec();
             return data;
         }
 
@@ -149,7 +148,7 @@ impl DecompressionBuffer
 
         // Read the rest of the data from the memory.
         let length_in_memory = length - length_in_file;
-        let data_from_memory = (&self.memory[0..length_in_memory]).to_vec();
+        let data_from_memory = self.memory[0..length_in_memory].to_vec();
 
         // Join the 2 parts and return.
         [data_from_file, data_from_memory].concat()

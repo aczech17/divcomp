@@ -7,7 +7,7 @@ use crate::compress::{archive_and_compress, CompressionMethod};
 use crate::compress::CompressionMethod::{HUFFMAN, LZ77};
 use crate::io_utils::path_utils::{parse_paths, sanitize_output_path, sanitize_path};
 
-pub struct GUI
+pub struct Gui
 {
     compression_method: CompressionMethod,
 
@@ -27,7 +27,7 @@ pub struct GUI
     processing: bool,
 }
 
-impl Default for GUI
+impl Default for Gui
 {
     fn default() -> Self
     {
@@ -75,7 +75,7 @@ macro_rules! display_archive
 }
 
 
-impl eframe::App for GUI
+impl eframe::App for Gui
 {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame)
     {
@@ -236,7 +236,7 @@ pub fn run(window_name: &str, archive_argument: Option<String>) -> eframe::Resul
         ..Default::default()
     };
 
-    let mut gui = GUI::default();
+    let mut gui = Gui::default();
     if let Some(path) = archive_argument
     {
         gui.input_archive_path_input = path.clone();

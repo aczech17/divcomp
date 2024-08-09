@@ -19,6 +19,6 @@ fn main()
 
     if let Err(err) = run("Archiwizator boży", archive_path)
     {
-        eprintln!("{}", err.to_string());
+        eprintln!("{}", err);
     }
 }

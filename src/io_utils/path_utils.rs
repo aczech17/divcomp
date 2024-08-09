@@ -43,7 +43,7 @@ pub fn sanitize_output_path(path: &String) -> String
 fn sanitize_all_paths(paths: Vec<String>) -> Vec<String>
 {
     let mut sanitized_paths: Vec<String> = paths.iter()
-        .map(|path| sanitize_path(path))
+        .map(sanitize_path)
         .collect();
 
     // Remove the duplicates.

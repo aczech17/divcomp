@@ -3,7 +3,7 @@ use crate::compress::decompress_error_to_string;
 
 pub mod directory_info;
 mod archive_header;
-pub mod archive;
+pub mod pack;
 pub mod extractor;
 
 pub fn create_extractor_and_execute

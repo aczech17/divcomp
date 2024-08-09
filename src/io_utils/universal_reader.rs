@@ -16,16 +16,14 @@ impl UniversalReader
 {
     pub fn new(file_handle: File) -> UniversalReader
     {
-        let file_reader = UniversalReader
+        UniversalReader
         {
             file_handle,
             buffer: vec![0; get_memory_buffers_size()],
             bytes_in_buffer: 0,
             bytes_read_from_buffer: 0,
             bits_read_total: 0,
-        };
-
-        file_reader
+        }
     }
 
     fn refill_buffer(&mut self)

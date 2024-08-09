@@ -26,11 +26,11 @@ impl Extractor
             .map_err(|_| DecompressionError::FileOpenError)?;
 
         // Check signature.
-        let huffman_signature: Vec<u8> = HUFFMAN_SIGNATURE.to_be_bytes().to_vec()
+        let huffman_signature: Vec<u8> = HUFFMAN_SIGNATURE.to_be_bytes()
             .into_iter().skip_while(|&byte| byte == 0)
             .collect();
 
-        let lz77_signature: Vec<u8> = LZ77_SIGNATURE.to_be_bytes().to_vec()
+        let lz77_signature: Vec<u8> = LZ77_SIGNATURE.to_be_bytes()
             .into_iter().skip_while(|&byte| byte == 0)
             .collect();
 
@@ -130,7 +130,7 @@ impl Extractor
         {
             // Check if this path is a subdirectory of some given path to be extracted.
             match paths_to_extract.iter()
-                .find(|&path_to_extract| is_a_subdirectory(path_to_extract, &path))
+                .find(|&path_to_extract| is_a_subdirectory(path_to_extract, path))
             {
                 None => // This path is not to be extracted. Ignore and continue.
                 {
@@ -143,7 +143,7 @@ impl Extractor
 
                 Some(path_to_extract) => // This path is a path to be extracted.
                 {
-                    let superpath_to_be_stripped = get_superpath(&path_to_extract);
+                    let superpath_to_be_stripped = get_superpath(path_to_extract);
 
                     let path_stripped = path.strip_prefix(&superpath_to_be_stripped)
                         .expect("Bad path stripping.")

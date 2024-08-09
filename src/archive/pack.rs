@@ -21,7 +21,7 @@ fn save_file_to_archive(file_path: &str, output: &mut ByteWriter) -> Result<(), 
     Ok(())
 }
 
-pub fn archive(input_paths: Vec<String>, output_filename: String) -> Result<(), String>
+pub fn pack(input_paths: Vec<String>, output_filename: String) -> Result<(), String>
 {
     let all_directory_infos: Vec<DirectoryInfo> = input_paths.iter()
         .map(|path| DirectoryInfo::new(path))

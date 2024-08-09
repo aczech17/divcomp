@@ -1,4 +1,3 @@
-use embed_resource;
 use std::ffi::OsString;
 use std::iter::empty;
 

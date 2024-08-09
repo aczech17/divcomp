@@ -14,13 +14,13 @@ impl FilesystemEntryInfo
 {
     fn new(path: &str, superpath: &str) -> FilesystemEntryInfo
     {
-        let size = if fs::metadata(&path).unwrap().is_dir()
+        let size = if fs::metadata(path).unwrap().is_dir()
         {
             None
         }
         else
         {
-            let file_size = fs::metadata(&path).unwrap().len();
+            let file_size = fs::metadata(path).unwrap().len();
             Some(file_size)
         };
 
@@ -46,7 +46,7 @@ impl DirectoryInfo
 {
     pub fn new(directory_path: &str) -> DirectoryInfo
     {
-        let directory_superpath = get_superpath(&directory_path);
+        let directory_superpath = get_superpath(directory_path);
 
         let mut entry_infos = vec![];
         for entry in WalkDir::new(directory_path)

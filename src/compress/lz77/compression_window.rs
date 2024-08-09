@@ -88,7 +88,7 @@ impl CompressionWindow
 
         if long_len == 0
         {
-            return (0, 0, data.get(0).cloned());
+            return (0, 0, data.first().cloned());
         }
 
         if short_len == 1

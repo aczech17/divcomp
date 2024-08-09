@@ -12,12 +12,6 @@ pub const LZ77_SIGNATURE: u64 = 0xAEFE77;
 
 pub fn bytes_to_u64(bytes: Vec<u8>) -> u64
 {
-    if bytes.len() != 8
-    {
-        eprintln!("bytes.len == {}", bytes.len());
-        panic!("Chujina");
-    }
-
     let buffer: [u8; 8] = bytes.try_into().unwrap();
     u64::from_be_bytes(buffer)
 }
@@ -27,7 +21,7 @@ pub fn get_memory_buffers_size() -> usize
     let mut system_info = System::new_all();
     system_info.refresh_all();
 
-    let total_memory = system_info.total_memory();
-    (total_memory / 16) as usize
+    let total_memory = system_info.total_memory() as usize;
+    total_memory / 16
 }
 
