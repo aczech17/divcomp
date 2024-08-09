@@ -2,7 +2,7 @@ use std::env;
 use std::path::Path;
 use rand::Rng;
 
-const ARCHIVE_EXTENSION: &str = ".xca";
+pub const ARCHIVE_EXTENSION: &str = "xca";
 
 pub fn is_a_subdirectory(superpath: &str, subpath: &str) -> bool
 {
@@ -36,7 +36,7 @@ pub fn sanitize_output_path(path: &String) -> String
     match path_initially_sanitized.ends_with(ARCHIVE_EXTENSION)
     {
         true => path_initially_sanitized,
-        false => format!("{}{}", path_initially_sanitized, ARCHIVE_EXTENSION)
+        false => format!("{}.{}", path_initially_sanitized, ARCHIVE_EXTENSION)
     }
 }
 

@@ -2,10 +2,12 @@ use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use eframe::egui;
+use rfd::FileDialog;
 use crate::archive::{create_extractor_and_execute, display_archive_content, extract_archive};
 use crate::compress::{archive_and_compress, CompressionMethod};
 use crate::compress::CompressionMethod::{HUFFMAN, LZ77};
 use crate::io_utils::path_utils::{parse_paths, sanitize_output_path, sanitize_path};
+use crate::io_utils::path_utils::ARCHIVE_EXTENSION;
 
 pub struct Gui
 {
@@ -90,6 +92,24 @@ impl eframe::App for Gui
             {
                 self.status_display = display;
             }
+
+            ui.horizontal(|ui|
+            {
+                if ui.button("Wybierz archiwum").clicked()
+                {
+                    if let Some(path) = FileDialog::new()
+                        .add_filter("Archiwa xca", &[ARCHIVE_EXTENSION])
+                        .add_filter("Wszystkie pliki", &["*"])
+                        .pick_file()
+                    {
+                        let path = path.to_str().unwrap().to_string();
+                        let path = sanitize_path(&path);
+
+                        self.input_archive_path_input = path.clone();
+                        display_archive!(self, &path);
+                    }
+                }
+            });
 
             ui.horizontal(|ui|
             {
