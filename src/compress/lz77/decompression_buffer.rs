@@ -1,5 +1,5 @@
 use crate::compress::DecompressionError;
-use crate::io_utils::get_tmp_file_name;
+use crate::io_utils::get_tmp_file_path;
 use std::fs;
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
@@ -19,8 +19,8 @@ impl DecompressionBuffer
 {
     pub fn new() -> Result<DecompressionBuffer, DecompressionError>
     {
-        let reserve_buffer_name = get_tmp_file_name()
-            .map_err(|_| DecompressionError::Other)?;
+        let reserve_buffer_name = get_tmp_file_path(".resbuf")
+            .ok_or(DecompressionError::Other)?;
 
         let buffer = DecompressionBuffer
         {

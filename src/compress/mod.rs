@@ -2,7 +2,7 @@ use std::fs;
 use std::path::Path;
 use crate::archive::archive::archive;
 use crate::compress::lz77::LZ77Compressor;
-use crate::io_utils::{byte_writer, get_tmp_file_name};
+use crate::io_utils::{byte_writer, get_tmp_file_path};
 
 pub mod lz77;
 pub mod huffman;
@@ -47,8 +47,8 @@ pub fn archive_and_compress
         return Err("Path already exists.".to_string());
     }
 
-    let tmp_file_name = get_tmp_file_name()
-        .map_err(|_| "Could not find a proper name for a temporary file while archiving.")?;
+    let tmp_file_name = get_tmp_file_path(".unarch")
+        .ok_or("Could not find a proper name for a temporary file while archiving.")?;
     archive(input_paths, tmp_file_name.clone())?;
 
 
