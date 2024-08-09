@@ -1,3 +1,5 @@
+const ARCHIVE_EXTENSION: &str = ".xca";
+
 pub fn is_a_subdirectory(superpath: &str, subpath: &str) -> bool
 {
     let superdirectories: Vec<&str> = superpath.split("/")
@@ -39,6 +41,16 @@ pub fn sanitize_path(path: &String) -> String
     }
 
     path
+}
+
+pub fn sanitize_output_path(path: &String) -> String
+{
+    let path_initially_sanitized = sanitize_path(path);
+    match path_initially_sanitized.ends_with(ARCHIVE_EXTENSION)
+    {
+        true => path_initially_sanitized,
+        false => format!("{}{}", path_initially_sanitized, ARCHIVE_EXTENSION)
+    }
 }
 
 fn sanitize_all_paths(paths: Vec<String>) -> Vec<String>

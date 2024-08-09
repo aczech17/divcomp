@@ -5,7 +5,7 @@ use eframe::egui;
 use crate::archive::{create_extractor_and_execute, display_archive_content, extract_archive};
 use crate::compress::{archive_and_compress, CompressionMethod};
 use crate::compress::CompressionMethod::{HUFFMAN, LZ77};
-use crate::io_utils::path_utils::{parse_paths, sanitize_path};
+use crate::io_utils::path_utils::{parse_paths, sanitize_output_path, sanitize_path};
 
 pub struct GUI
 {
@@ -48,6 +48,33 @@ impl Default for GUI
     }
 }
 
+// I wrote a macro so that the borrow checker fucks off.
+macro_rules! display_archive
+{
+    ($self: ident, $input_path:expr) =>
+    {
+        if !$self.processing
+        {
+            $self.processing = true;
+            $self.archive_content_display = String::new();
+            let input_path = sanitize_path($input_path);
+            let result = Arc::clone(&$self.archive_content_display_result);
+
+            thread::spawn(move ||
+            {
+                let content = create_extractor_and_execute
+                    (input_path, None, None, display_archive_content);
+
+                let mut result_lock = result.lock().unwrap();
+                *result_lock = Some(content)
+            });
+
+            $self.processing = false;
+        }
+    }
+}
+
+
 impl eframe::App for GUI
 {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame)
@@ -71,26 +98,7 @@ impl eframe::App for GUI
 
                 if ui.button("Pokaż").clicked()
                 {
-                    if self.processing
-                    {
-                        return;
-                    }
-
-                    self.processing = true;
-                    self.archive_content_display = String::new();
-                    let input_path = sanitize_path(&self.input_archive_path_input);
-                    let result = Arc::clone(&self.archive_content_display_result);
-
-                    thread::spawn(move ||
-                    {
-                        let content = create_extractor_and_execute
-                            (input_path, None, None, display_archive_content);
-
-                        let mut result_lock = result.lock().unwrap();
-                        *result_lock = Some(content)
-                    });
-
-                    self.processing = false;
+                    display_archive!(self, &self.input_archive_path_input);
                 }
             });
 
@@ -177,7 +185,7 @@ impl eframe::App for GUI
                     }
 
 
-                    let output_path = sanitize_path(&self.output_archive_path_input);
+                    let output_path = sanitize_output_path(&self.output_archive_path_input);
 
                     self.processing = true;
                     self.status_display = String::from("Pakowanie...");
@@ -219,7 +227,7 @@ impl eframe::App for GUI
     }
 }
 
-pub fn run(window_name: &str) -> eframe::Result
+pub fn run(window_name: &str, archive_argument: Option<String>) -> eframe::Result
 {
     env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
 
@@ -228,13 +236,20 @@ pub fn run(window_name: &str) -> eframe::Result
         ..Default::default()
     };
 
+    let mut gui = GUI::default();
+    if let Some(path) = archive_argument
+    {
+        gui.input_archive_path_input = path.clone();
+        display_archive!(gui, &path);
+    }
+
     eframe::run_native
     (
         window_name,
         options,
         Box::new(|_cc|
         {
-            Ok(Box::<GUI>::default())
+            Ok(Box::new(gui))
         }),
     )
 }
