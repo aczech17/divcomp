@@ -17,14 +17,12 @@ pub struct Gui
     choose_files_to_extract_input: String,
     output_directory_input: String,
 
-    archive_content_display_result: Arc<Mutex<Option<String>>>,
-    archive_content_display: String,
+    archive_content_display: (Arc<Mutex<Option<String>>>, String),
 
     paths_to_archive_input: String,
     output_archive_path_input: String,
 
-    status_display_result: Arc<Mutex<Option<String>>>,
-    status_display: String,
+    status_display: (Arc<Mutex<Option<String>>>, String),
 
     processing: bool,
 }
@@ -39,18 +37,34 @@ impl Default for Gui
             input_archive_path_input: String::new(),
             choose_files_to_extract_input: String::new(),
             output_directory_input: String::new(),
-            archive_content_display_result: Arc::new(Mutex::new(None)),
-            archive_content_display: String::new(),
+            archive_content_display: (Arc::new(Mutex::new(None)), String::new()),
             paths_to_archive_input: String::new(),
             output_archive_path_input: String::new(),
-            status_display_result: Arc::new(Mutex::new(None)),
-            status_display: String::new(),
+            status_display: (Arc::new(Mutex::new(None)), String::new()),
             processing: false,
         }
     }
 }
 
-// I wrote a macro so that the borrow checker fucks off.
+macro_rules! spawn_thread
+{
+    ($self: ident, $result_variable: ident, $code: block) =>
+    {
+        $self.processing = true;
+
+        let exec_result = Arc::clone(&$self.$result_variable.0);
+
+        thread::spawn(move ||
+        {
+            let result = $code;
+
+            let mut exec_result_lock = exec_result.lock().unwrap();
+            *exec_result_lock = Some(result);
+        });
+        $self.processing = false;
+    };
+}
+
 macro_rules! display_archive
 {
     ($self: ident, $input_path:expr) =>
@@ -58,9 +72,9 @@ macro_rules! display_archive
         if !$self.processing
         {
             $self.processing = true;
-            $self.archive_content_display = String::new();
+            $self.archive_content_display.1 = String::new();
             let input_path = sanitize_path($input_path);
-            let result = Arc::clone(&$self.archive_content_display_result);
+            let result = Arc::clone(&$self.archive_content_display.0);
 
             thread::spawn(move ||
             {
@@ -76,21 +90,20 @@ macro_rules! display_archive
     }
 }
 
-
 impl eframe::App for Gui
 {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame)
     {
         egui::CentralPanel::default().show(ctx, |ui|
         {
-            if let Some(display) = self.archive_content_display_result.lock().unwrap().take()
+            if let Some(display) = self.archive_content_display.0.lock().unwrap().take()
             {
-                self.archive_content_display = display;
+                self.archive_content_display.1 = display;
             }
 
-            if let Some(display) = self.status_display_result.lock().unwrap().take()
+            if let Some(display) = self.status_display.0.lock().unwrap().take()
             {
-                self.status_display = display;
+                self.status_display.1 = display;
             }
 
             ui.horizontal(|ui|
@@ -125,7 +138,7 @@ impl eframe::App for Gui
             ui.vertical(|ui|
             {
                 ui.label("Zawartość archiwum:");
-                ui.monospace(&self.archive_content_display);
+                ui.monospace(&self.archive_content_display.1);
             });
 
             ui.vertical(|ui|
@@ -147,27 +160,22 @@ impl eframe::App for Gui
                     }
 
                     self.processing = true;
-                    self.status_display = String::from("Wypakowywanie...");
+                    self.status_display.1 = String::from("Wypakowywanie...");
 
                     let input_path = sanitize_path(&self.input_archive_path_input);
                     let output_directory = sanitize_path(&self.output_directory_input);
                     let chosen_paths = parse_paths(&self.choose_files_to_extract_input);
-                    let result = Arc::clone(&self.status_display_result);
 
-                    thread::spawn(move ||
+                    spawn_thread!(self, status_display,
                     {
-                        let status_message = create_extractor_and_execute
-                            (
-                                input_path,
-                                Some(chosen_paths),
-                                Some(output_directory),
-                                extract_archive
-                            );
-
-                        let mut result_lock = result.lock().unwrap();
-                        *result_lock = Some(status_message);
+                        create_extractor_and_execute
+                        (
+                            input_path,
+                            Some(chosen_paths),
+                            Some(output_directory),
+                            extract_archive
+                        )
                     });
-                    self.processing = false;
                 }
             });
 
@@ -199,33 +207,26 @@ impl eframe::App for Gui
                     {
                         if !Path::new(path).exists()
                         {
-                            self.status_display = format!("Plik {} nie istnieje.", path);
+                            self.status_display.1 = format!("Plik {} nie istnieje.", path);
                             return;
                         }
                     }
 
 
                     let output_path = sanitize_output_path(&self.output_archive_path_input);
+                    self.status_display.1 = String::from("Pakowanie...");
 
-                    self.processing = true;
-                    self.status_display = String::from("Pakowanie...");
-                    let result = Arc::clone(&self.status_display_result);
 
                     let compression_method = self.compression_method;
-                    thread::spawn(move ||
+
+                    spawn_thread!(self, status_display,
                     {
-                        let status_message = match
-                        archive_and_compress(input_paths, output_path, compression_method)
+                        match archive_and_compress(input_paths, output_path, compression_method)
                         {
                             Ok(_) => "Spakowano.".to_string(),
                             Err(err_msg) => err_msg,
-                        };
-
-                        let mut result_lock = result.lock().unwrap();
-                        *result_lock = Some(status_message);
+                        }
                     });
-
-                    self.processing = false;
                 }
 
                 ui.vertical(|ui|
@@ -241,7 +242,7 @@ impl eframe::App for Gui
 
             ui.horizontal(|ui|
             {
-                ui.monospace(&mut self.status_display);
+                ui.monospace(&mut self.status_display.1);
             });
         });
     }
