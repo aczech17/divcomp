@@ -6,45 +6,28 @@ const ARCHIVE_EXTENSION: &str = ".xca";
 
 pub fn is_a_subdirectory(superpath: &str, subpath: &str) -> bool
 {
-    let superdirectories: Vec<&str> = superpath.split("/")
-        .collect();
-    let subdirectories: Vec<&str> = subpath.split("/")
-        .collect();
-
-    if superdirectories.len() > subdirectories.len()
-    {
-        return false;
-    }
-
-    for (i, elem) in superdirectories.iter().enumerate()
-    {
-        if &subdirectories[i] != elem
-        {
-            return false;
-        }
-    }
-    true
+    subpath.to_string().starts_with(superpath)
 }
 
 pub fn get_superpath(path: &str) -> String
 {
-    match path.rfind("/")
-    {
-        Some(pos) => path[..pos + 1].to_string(),
-        None => String::new(),
-    }
+    Path::new(path)
+        .parent()
+        .unwrap_or(Path::new(""))
+        .to_str()
+        .unwrap_or("")
+        .to_string()
 }
 
 pub fn sanitize_path(path: &String) -> String
 {
-    let mut path = path.replace("\\", "/")
-        .replace("\"", "");
-    if path.ends_with('/')
-    {
-        path.pop();
-    }
-
-    path
+    Path::new(path)
+        .to_str()
+        .unwrap_or("")
+        .replace("\\", "/")// Replace backslash with slash.
+        .replace("\"", "")// Remove the quotes.
+        .trim_end_matches("/")
+        .to_string()
 }
 
 pub fn sanitize_output_path(path: &String) -> String
@@ -59,14 +42,15 @@ pub fn sanitize_output_path(path: &String) -> String
 
 fn sanitize_all_paths(paths: Vec<String>) -> Vec<String>
 {
-    let mut paths: Vec<String> = paths.iter()
+    let mut sanitized_paths: Vec<String> = paths.iter()
         .map(|path| sanitize_path(path))
         .collect();
 
-    paths.sort();
-    paths.dedup();
+    // Remove the duplicates.
+    sanitized_paths.sort();
+    sanitized_paths.dedup();
 
-    paths
+    sanitized_paths
 }
 
 pub fn parse_paths(text: &str) -> Vec<String>
@@ -79,7 +63,6 @@ pub fn parse_paths(text: &str) -> Vec<String>
     sanitize_all_paths(paths)
 }
 
-
 pub fn get_tmp_file_path(extension: &str) -> Option<String>
 {
     let tmp_directory = if cfg!(unix)
@@ -88,7 +71,7 @@ pub fn get_tmp_file_path(extension: &str) -> Option<String>
     }
     else
     {
-        env::var("TEMP").unwrap()
+        env::var("TEMP").unwrap_or_else(|_| String::from("."))
     };
 
     const FILENAME_SIZE: usize = 10;
