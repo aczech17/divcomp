@@ -3,19 +3,13 @@
 mod io_utils;
 mod archive;
 mod compress;
+use std::env;
 mod gui;
-
-use std::env::args;
 use gui::run;
 
 fn main()
 {
-    let args: Vec<String> = args().collect();
-    let archive_path = match args.len() >= 2
-    {
-        false => None,
-        true => Some(args[1].clone()),
-    };
+    let archive_path = env::args().nth(1);
 
     if let Err(err) = run("Archiwizator boży", archive_path)
     {

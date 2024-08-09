@@ -24,8 +24,8 @@ pub fn sanitize_path(path: &String) -> String
     Path::new(path)
         .to_str()
         .unwrap_or("")
-        .replace("\\", "/")// Replace backslash with slash.
         .replace("\"", "")// Remove the quotes.
+        .replace("\\", "/")// Replace backslash with slash.
         .trim_end_matches("/")
         .to_string()
 }
