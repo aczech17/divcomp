@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::env;
 use std::path::Path;
 use rand::Rng;
@@ -61,6 +62,25 @@ pub fn parse_paths(text: &str) -> Vec<String>
         .collect();
 
     sanitize_all_paths(paths)
+}
+
+pub fn get_display_paths(paths: &Vec<String>) -> HashMap<String, String>
+{
+    paths.iter().map(|path|
+    {
+        let truncated_path = path.split_whitespace().next().unwrap_or(path);
+
+        let slash_count = truncated_path.matches('/').count();
+        let indent = " ".repeat(slash_count * 4); // 4 spaces for one level
+
+        let final_path = truncated_path.rsplit_once('/')
+            .map(|(_, remainder)| remainder)
+            .unwrap_or(truncated_path);
+
+        let display_path = format!("{}{}", indent, final_path);
+        (path.clone(), display_path)
+    })
+        .collect()
 }
 
 pub fn get_tmp_file_path(extension: &str) -> Option<String>

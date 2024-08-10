@@ -7,7 +7,7 @@ use rfd::FileDialog;
 use crate::archive::{create_extractor_and_execute, display_archive_content, extract_archive};
 use crate::compress::{archive_and_compress, CompressionMethod};
 use crate::compress::CompressionMethod::{HUFFMAN, LZ77};
-use crate::io_utils::path_utils::{parse_paths, sanitize_output_path, sanitize_path};
+use crate::io_utils::path_utils::{parse_paths, sanitize_output_path, sanitize_path, get_display_paths};
 use crate::io_utils::path_utils::ARCHIVE_EXTENSION;
 
 pub struct Gui
@@ -106,11 +106,7 @@ impl eframe::App for Gui
             if let Some(content) = self.archive_content.0.lock().unwrap().take()
             {
                 self.archive_content.1 = content;
-
-                self.display_path_map = self.archive_content.1
-                   .iter()
-                   .map(|path| (path.clone(), path.to_uppercase())) // MOCK
-                   .collect();
+                self.display_path_map = get_display_paths(&self.archive_content.1);
             }
 
             if let Some(display) = self.status_display.0.lock().unwrap().take()
