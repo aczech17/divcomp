@@ -10,6 +10,45 @@ use crate::compress::CompressionMethod::{HUFFMAN, LZ77};
 use crate::io_utils::path_utils::{sanitize_output_path, sanitize_path, get_display_paths};
 use crate::io_utils::path_utils::ARCHIVE_EXTENSION;
 
+struct MultithreadedData<T>
+{
+    pub result: Arc<Mutex<Option<T>>>,
+    content: T,
+}
+
+impl<T> MultithreadedData<T>
+{
+    fn new(content: T) -> Self
+    {
+        Self
+        {
+            result: Arc::new(Mutex::new(None)),
+            content,
+        }
+    }
+
+    fn set_new_content(&mut self) -> bool
+    {
+        if let Some(content) = self.result.lock().unwrap().take()
+        {
+            self.content = content;
+            return true;
+        }
+
+        false
+    }
+
+    fn set_content(&mut self, value: T)
+    {
+        self.content = value;
+    }
+
+    fn get_content(&self) -> &T
+    {
+        &self.content
+    }
+}
+
 pub struct Gui
 {
     compression_method: CompressionMethod,
@@ -17,14 +56,14 @@ pub struct Gui
     input_archive_path_input: String,
     output_directory: String,
 
-    archive_content: (Arc<Mutex<Option<Vec<String>>>>, Vec<String>),
+    archive_content: MultithreadedData<Vec<String>>,
     selected_archive_items: HashSet<String>,
     display_path_map: HashMap<String, String>,
 
     paths_to_pack: Vec<String>,
     output_archive_path_input: String,
 
-    status_display: (Arc<Mutex<Option<String>>>, String),
+    status_display: MultithreadedData<String>,
 
     processing: bool,
 }
@@ -38,12 +77,12 @@ impl Default for Gui
             compression_method: HUFFMAN,
             input_archive_path_input: String::new(),
             output_directory: String::new(),
-            archive_content: (Arc::new(Mutex::new(None)), Vec::new()),
+            archive_content: MultithreadedData::new(vec![]),
             selected_archive_items: HashSet::new(),
             display_path_map: HashMap::new(),
             paths_to_pack: Vec::new(),
             output_archive_path_input: String::new(),
-            status_display: (Arc::new(Mutex::new(None)), String::new()),
+            status_display: MultithreadedData::new(String::new()),
             processing: false,
         }
     }
@@ -55,7 +94,7 @@ macro_rules! spawn_thread
     {
         $self.processing = true;
 
-        let exec_result = Arc::clone(&$self.$result_variable.0);
+        let exec_result = Arc::clone(&$self.$result_variable.result);
 
         thread::spawn(move ||
         {
@@ -76,7 +115,7 @@ macro_rules! display_archive
         {
             $self.processing = true;
             let input_path = sanitize_path($input_path);
-            let result = Arc::clone(&$self.archive_content.0);
+            let result = Arc::clone(&$self.archive_content.result);
 
             thread::spawn(move ||
             {
@@ -103,16 +142,19 @@ impl eframe::App for Gui
     {
         egui::CentralPanel::default().show(ctx, |ui|
         {
-            if let Some(content) = self.archive_content.0.lock().unwrap().take()
+            if self.archive_content.set_new_content()
             {
-                self.archive_content.1 = content;
-                self.display_path_map = get_display_paths(&self.archive_content.1);
+                let archive_content = self.archive_content.get_content();
+                self.display_path_map = get_display_paths(archive_content);
             }
 
-            if let Some(display) = self.status_display.0.lock().unwrap().take()
-            {
-                self.status_display.1 = display;
-            }
+            // if let Some(content) = self.archive_content.0.lock().unwrap().take()
+            // {
+            //     self.archive_content.1 = content;
+            //     self.display_path_map = get_display_paths(&self.archive_content.1);
+            // }
+
+            self.status_display.set_new_content();
 
             ui.horizontal(|ui|
             {
@@ -146,11 +188,13 @@ impl eframe::App for Gui
             ui.vertical(|ui|
             {
                 ui.label("Zawartość archiwum:");
-                egui::ScrollArea::vertical().show(ui, |ui|
+                egui::ScrollArea::vertical()
+                    .max_height(200.0)
+                    .show(ui, |ui|
                 {
                     ui.vertical(|ui|
                     {
-                        for path in self.archive_content.1.iter()
+                        for path in self.archive_content.get_content().iter()
                         {
                             let is_selected = self.selected_archive_items.contains(path);
                             let display_path = self.display_path_map.get(path).unwrap();
@@ -196,7 +240,7 @@ impl eframe::App for Gui
                     }
 
                     self.processing = true;
-                    self.status_display.1 = String::from("Wypakowywanie...");
+                    self.status_display.set_content(String::from("Wypakowywanie..."));
 
                     let input_path = sanitize_path(&self.input_archive_path_input);
                     let output_directory = sanitize_path(&self.output_directory);
@@ -250,13 +294,18 @@ impl eframe::App for Gui
                 }
             });
 
-            ui.vertical(|ui|
+            ui.label("Ścieżki do spakowania:");
+            egui::ScrollArea::vertical()
+                .max_height(200.0)
+                .show(ui, |ui|
             {
-                ui.label("Ścieżki do spakowania:");
-                for path in &self.paths_to_pack
+                ui.vertical(|ui|
                 {
-                    ui.label(path);
-                }
+                    for path in &self.paths_to_pack
+                    {
+                        ui.label(path);
+                    }
+                })
             });
 
             ui.horizontal(|ui|
@@ -276,13 +325,13 @@ impl eframe::App for Gui
                     {
                         if !Path::new(path).exists()
                         {
-                            self.status_display.1 = format!("Plik {} nie istnieje.", path);
+                            self.status_display.set_content(format!("Plik {} nie istnieje.", path));
                             return;
                         }
                     }
 
                     let output_path = sanitize_output_path(&self.output_archive_path_input);
-                    self.status_display.1 = String::from("Pakowanie...");
+                    self.status_display.set_content(String::from("Pakowanie..."));
 
 
                     let compression_method = self.compression_method;
@@ -310,7 +359,7 @@ impl eframe::App for Gui
 
             ui.horizontal(|ui|
             {
-                ui.monospace(&mut self.status_display.1);
+                ui.monospace(self.status_display.get_content());
             });
         });
     }
