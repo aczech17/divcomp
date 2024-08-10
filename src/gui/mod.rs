@@ -15,7 +15,7 @@ pub struct Gui
     compression_method: CompressionMethod,
 
     input_archive_path_input: String,
-    output_directory_input: String,
+    output_directory: String,
 
     archive_content: (Arc<Mutex<Option<Vec<String>>>>, Vec<String>),
     selected_archive_items: HashSet<String>,
@@ -36,7 +36,7 @@ impl Default for Gui
         {
             compression_method: HUFFMAN,
             input_archive_path_input: String::new(),
-            output_directory_input: String::new(),
+            output_directory: String::new(),
             archive_content: (Arc::new(Mutex::new(None)), Vec::new()),
             selected_archive_items: HashSet::new(),
             paths_to_archive_input: String::new(),
@@ -171,8 +171,16 @@ impl eframe::App for Gui
 
             ui.horizontal(|ui|
             {
-                ui.add(egui::TextEdit::singleline(&mut self.output_directory_input)
+                ui.add(egui::TextEdit::singleline(&mut self.output_directory)
                     .hint_text("Wypakuj do..."));
+
+                if ui.button("Wybierz folder do wypakowania").clicked()
+                {
+                    if let Some(path) = FileDialog::new().pick_folder()
+                    {
+                        self.output_directory = path.to_str().unwrap().to_string();
+                    }
+                }
 
                 if ui.button("Wypakuj").clicked()
                 {
@@ -185,7 +193,7 @@ impl eframe::App for Gui
                     self.status_display.1 = String::from("Wypakowywanie...");
 
                     let input_path = sanitize_path(&self.input_archive_path_input);
-                    let output_directory = sanitize_path(&self.output_directory_input);
+                    let output_directory = sanitize_path(&self.output_directory);
 
 
                     // Get chosen_paths from clicked position of the selection menu
