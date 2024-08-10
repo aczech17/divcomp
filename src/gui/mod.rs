@@ -54,11 +54,29 @@ impl Default for Gui
 
 impl Gui
 {
-    fn select_paths_to_pack(&mut self)
+    fn select_files_to_pack(&mut self)
     {
         if let Some(paths) = FileDialog::new()
             .set_title("Wybierz pliki")
             .pick_files()
+        {
+            let paths_to_pack: Vec<String> = paths.into_iter()
+                .map(|path| path.to_str().unwrap_or("").to_string())
+                .collect();
+
+            self.paths_to_pack.extend(paths_to_pack);
+
+            // Now remove the duplicates.
+            let unique_paths: HashSet<String> = self.paths_to_pack.iter().cloned().collect();
+            self.paths_to_pack = unique_paths.into_iter().collect();
+        }
+    }
+
+    fn select_folders_to_pack(&mut self)
+    {
+        if let Some(paths) = FileDialog::new()
+            .set_title("Wybierz foldery")
+            .pick_folders()
         {
             let paths_to_pack: Vec<String> = paths.into_iter()
                 .map(|path| path.to_str().unwrap_or("").to_string())
@@ -149,7 +167,8 @@ impl eframe::App for Gui
                     {
                         ui.label("Zawartość archiwum:");
                         egui::ScrollArea::vertical()
-                            .max_height(200.0)
+                            .min_scrolled_height(300.0)
+                            .max_height(600.0)
                             .show(ui, |ui|
                             {
                                 ui.vertical(|ui|
@@ -232,14 +251,20 @@ impl eframe::App for Gui
                     {
                         if ui.button("Dodaj pliki do spakowania").clicked()
                         {
-                            self.select_paths_to_pack();
+                            self.select_files_to_pack();
+                        }
+
+                        if ui.button("Dodaj foldery do spakowania").clicked()
+                        {
+                            self.select_folders_to_pack();
                         }
                     });
 
                     ui.label("Ścieżki do spakowania:");
 
                     egui::ScrollArea::vertical()
-                        .max_height(200.0)
+                        .min_scrolled_height(300.0)
+                        .max_height(600.0)
                         .show(ui, |ui|
                     {
                         ui.vertical(|ui|
