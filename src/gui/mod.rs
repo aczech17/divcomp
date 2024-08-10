@@ -61,7 +61,7 @@ pub struct Gui
     display_path_map: HashMap<String, String>,
 
     paths_to_pack: Vec<String>,
-    output_archive_path_input: String,
+    output_archive_path: String,
 
     status_display: MultithreadedData<String>,
 
@@ -81,9 +81,23 @@ impl Default for Gui
             selected_archive_items: HashSet::new(),
             display_path_map: HashMap::new(),
             paths_to_pack: Vec::new(),
-            output_archive_path_input: String::new(),
+            output_archive_path: String::new(),
             status_display: MultithreadedData::new(String::new()),
             processing: false,
+        }
+    }
+}
+
+impl Gui
+{
+    fn select_output_archive_path(&mut self)
+    {
+        if let Some(path) = FileDialog::new()
+            .set_title("Wybierz lokalizację i wpisz nazwę.")
+            .add_filter("Archiwum xca", &[ARCHIVE_EXTENSION])
+            .save_file()
+        {
+            self.output_archive_path = path.to_str().unwrap().to_string();
         }
     }
 }
@@ -147,12 +161,6 @@ impl eframe::App for Gui
                 let archive_content = self.archive_content.get_content();
                 self.display_path_map = get_display_paths(archive_content);
             }
-
-            // if let Some(content) = self.archive_content.0.lock().unwrap().take()
-            // {
-            //     self.archive_content.1 = content;
-            //     self.display_path_map = get_display_paths(&self.archive_content.1);
-            // }
 
             self.status_display.set_new_content();
 
@@ -301,17 +309,40 @@ impl eframe::App for Gui
             {
                 ui.vertical(|ui|
                 {
+                    let mut paths_to_remove = Vec::new();
+
                     for path in &self.paths_to_pack
                     {
-                        ui.label(path);
+                        let path_label = ui.selectable_label(false, path);
+                        if path_label.hovered() && ui.input(|i| i.pointer.secondary_clicked())
+                        {
+                            paths_to_remove.push(path.clone());
+                        }
+                    }
+
+                    // Remove the paths that were right-clicked.
+                    for path_to_remove in paths_to_remove
+                    {
+                        self.paths_to_pack.retain(|path| path != &path_to_remove);
                     }
                 })
             });
 
+            if ui.button("Wyczyść").clicked()
+            {
+                self.paths_to_pack.clear();
+            }
+
             ui.horizontal(|ui|
             {
-                ui.add(egui::TextEdit::singleline(&mut self.output_archive_path_input)
+                ui.add(egui::TextEdit::singleline(&mut self.output_archive_path)
                     .hint_text("Ścieżka do wynikowego archiwum..."));
+
+                if ui.button("Wybierz lokalizację archiwum").clicked()
+                {
+                    self.select_output_archive_path();
+                }
+
                 if ui.button("Spakuj").clicked()
                 {
                     if self.processing
@@ -330,7 +361,7 @@ impl eframe::App for Gui
                         }
                     }
 
-                    let output_path = sanitize_output_path(&self.output_archive_path_input);
+                    let output_path = sanitize_output_path(&self.output_archive_path);
                     self.status_display.set_content(String::from("Pakowanie..."));
 
 
