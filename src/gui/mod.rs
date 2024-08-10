@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -19,6 +19,7 @@ pub struct Gui
 
     archive_content: (Arc<Mutex<Option<Vec<String>>>>, Vec<String>),
     selected_archive_items: HashSet<String>,
+    display_path_map: HashMap<String, String>,
 
     paths_to_archive_input: String,
     output_archive_path_input: String,
@@ -39,6 +40,7 @@ impl Default for Gui
             output_directory: String::new(),
             archive_content: (Arc::new(Mutex::new(None)), Vec::new()),
             selected_archive_items: HashSet::new(),
+            display_path_map: HashMap::new(),
             paths_to_archive_input: String::new(),
             output_archive_path_input: String::new(),
             status_display: (Arc::new(Mutex::new(None)), String::new()),
@@ -80,10 +82,11 @@ macro_rules! display_archive
             {
                 let content = create_extractor_and_execute
                     (input_path, None, None, display_archive_content);
-                let paths = content
+                let paths: Vec<String> = content
                     .lines()
                     .map(|line| line.to_string())
                     .collect();
+
 
                 let mut result_lock = result.lock().unwrap();
                 *result_lock = Some(paths)
@@ -100,9 +103,14 @@ impl eframe::App for Gui
     {
         egui::CentralPanel::default().show(ctx, |ui|
         {
-            if let Some(display) = self.archive_content.0.lock().unwrap().take()
+            if let Some(content) = self.archive_content.0.lock().unwrap().take()
             {
-                self.archive_content.1 = display;
+                self.archive_content.1 = content;
+
+                self.display_path_map = self.archive_content.1
+                   .iter()
+                   .map(|path| (path.clone(), path.to_uppercase())) // MOCK
+                   .collect();
             }
 
             if let Some(display) = self.status_display.0.lock().unwrap().take()
@@ -149,7 +157,9 @@ impl eframe::App for Gui
                         for path in self.archive_content.1.iter()
                         {
                             let is_selected = self.selected_archive_items.contains(path);
-                            let response = ui.selectable_label(is_selected, path);
+                            let display_path = self.display_path_map.get(path).unwrap();
+
+                            let response = ui.selectable_label(is_selected, display_path);
 
                             if response.clicked()
                             {
