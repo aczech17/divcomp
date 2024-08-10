@@ -43,7 +43,7 @@ pub fn sanitize_output_path(path: &String) -> String
 
 pub fn get_display_paths(paths: &[String]) -> HashMap<String, String>
 {
-    paths.iter().map(|path|
+    let mut indented_paths: HashMap<String, String> = paths.iter().map(|path|
     {
         let truncated_path = path.split_whitespace().next().unwrap_or(path);
 
@@ -57,7 +57,21 @@ pub fn get_display_paths(paths: &[String]) -> HashMap<String, String>
         let display_path = format!("{}{}", indent, final_path);
         (path.clone(), display_path)
     })
-        .collect()
+        .collect();
+
+    // Align all paths to the left.
+    let min_leading_spaces = indented_paths.values()
+        .map(|s| s.chars().take_while(|c| *c == ' ').count())
+        .min()
+        .unwrap_or(0);
+
+    for indented_path in indented_paths.values_mut()
+    {
+        let aligned_path = indented_path.chars().skip(min_leading_spaces).collect();
+        *indented_path = aligned_path;
+    }
+
+    indented_paths
 }
 
 pub fn get_tmp_file_path(extension: &str) -> Option<String>
