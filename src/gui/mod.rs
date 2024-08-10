@@ -97,6 +97,14 @@ impl Gui
             display_archive!(self, &path);
         }
     }
+
+    fn select_output_directory(&mut self)
+    {
+        if let Some(path) = FileDialog::new().pick_folder()
+        {
+            self.output_directory = path.to_str().unwrap().to_string();
+        }
+    }
 }
 
 impl eframe::App for Gui
@@ -176,10 +184,7 @@ impl eframe::App for Gui
 
                         if ui.button("Wybierz folder do wypakowania").clicked()
                         {
-                            if let Some(path) = FileDialog::new().pick_folder()
-                            {
-                                self.output_directory = path.to_str().unwrap().to_string();
-                            }
+                            self.select_output_directory();
                         }
 
                         if ui.button("Wypakuj").clicked()
