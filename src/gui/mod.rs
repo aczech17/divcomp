@@ -7,7 +7,7 @@ use rfd::FileDialog;
 use crate::archive::{create_extractor_and_execute, display_archive_content, extract_archive};
 use crate::compress::{archive_and_compress, CompressionMethod};
 use crate::compress::CompressionMethod::{HUFFMAN, LZ77};
-use crate::io_utils::path_utils::{parse_paths, sanitize_output_path, sanitize_path, get_display_paths};
+use crate::io_utils::path_utils::{sanitize_output_path, sanitize_path, get_display_paths};
 use crate::io_utils::path_utils::ARCHIVE_EXTENSION;
 
 pub struct Gui
@@ -21,7 +21,7 @@ pub struct Gui
     selected_archive_items: HashSet<String>,
     display_path_map: HashMap<String, String>,
 
-    paths_to_archive_input: String,
+    paths_to_pack: Vec<String>,
     output_archive_path_input: String,
 
     status_display: (Arc<Mutex<Option<String>>>, String),
@@ -41,7 +41,7 @@ impl Default for Gui
             archive_content: (Arc::new(Mutex::new(None)), Vec::new()),
             selected_archive_items: HashSet::new(),
             display_path_map: HashMap::new(),
-            paths_to_archive_input: String::new(),
+            paths_to_pack: Vec::new(),
             output_archive_path_input: String::new(),
             status_display: (Arc::new(Mutex::new(None)), String::new()),
             processing: false,
@@ -231,8 +231,32 @@ impl eframe::App for Gui
 
             ui.horizontal(|ui|
             {
-                ui.add(egui::TextEdit::multiline(&mut self.paths_to_archive_input)
-                    .hint_text("Ścieżki plików (katalogów) do spakowania..."));
+                if ui.button("Dodaj pliki do spakowania").clicked()
+                {
+                    if let Some(paths) = FileDialog::new()
+                        .set_title("Wybierz pliki")
+                        .pick_files()
+                    {
+                        let paths_to_pack: Vec<String> = paths.into_iter()
+                            .map(|path| path.to_str().unwrap_or("").to_string())
+                            .collect();
+
+                        self.paths_to_pack.extend(paths_to_pack);
+
+                        // Now remove the duplicates.
+                        let unique_paths: HashSet<String> = self.paths_to_pack.iter().cloned().collect();
+                        self.paths_to_pack = unique_paths.into_iter().collect();
+                    }
+                }
+            });
+
+            ui.vertical(|ui|
+            {
+                ui.label("Ścieżki do spakowania:");
+                for path in &self.paths_to_pack
+                {
+                    ui.label(path);
+                }
             });
 
             ui.horizontal(|ui|
@@ -246,7 +270,7 @@ impl eframe::App for Gui
                         return;
                     }
 
-                    let input_paths = parse_paths(&self.paths_to_archive_input);
+                    let input_paths = self.paths_to_pack.clone();
 
                     for path in &input_paths
                     {
@@ -256,7 +280,6 @@ impl eframe::App for Gui
                             return;
                         }
                     }
-
 
                     let output_path = sanitize_output_path(&self.output_archive_path_input);
                     self.status_display.1 = String::from("Pakowanie...");

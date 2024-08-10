@@ -25,7 +25,7 @@ impl FilesystemEntryInfo
         };
 
         let path = path.strip_prefix(superpath)
-            .unwrap()
+            .unwrap_or(path)
             .to_string();
 
         // Remove the initial slash if any.

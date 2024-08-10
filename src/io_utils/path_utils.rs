@@ -41,29 +41,6 @@ pub fn sanitize_output_path(path: &String) -> String
     }
 }
 
-fn sanitize_all_paths(paths: Vec<String>) -> Vec<String>
-{
-    let mut sanitized_paths: Vec<String> = paths.iter()
-        .map(sanitize_path)
-        .collect();
-
-    // Remove the duplicates.
-    sanitized_paths.sort();
-    sanitized_paths.dedup();
-
-    sanitized_paths
-}
-
-pub fn parse_paths(text: &str) -> Vec<String>
-{
-    let paths: Vec<String> = text
-        .lines()
-        .map(|line| line.to_string())
-        .collect();
-
-    sanitize_all_paths(paths)
-}
-
 pub fn get_display_paths(paths: &Vec<String>) -> HashMap<String, String>
 {
     paths.iter().map(|path|
