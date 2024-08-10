@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -14,10 +15,10 @@ pub struct Gui
     compression_method: CompressionMethod,
 
     input_archive_path_input: String,
-    choose_files_to_extract_input: String,
     output_directory_input: String,
 
-    archive_content_display: (Arc<Mutex<Option<String>>>, String),
+    archive_content: (Arc<Mutex<Option<Vec<String>>>>, Vec<String>),
+    selected_archive_items: HashSet<String>,
 
     paths_to_archive_input: String,
     output_archive_path_input: String,
@@ -35,9 +36,9 @@ impl Default for Gui
         {
             compression_method: HUFFMAN,
             input_archive_path_input: String::new(),
-            choose_files_to_extract_input: String::new(),
             output_directory_input: String::new(),
-            archive_content_display: (Arc::new(Mutex::new(None)), String::new()),
+            archive_content: (Arc::new(Mutex::new(None)), Vec::new()),
+            selected_archive_items: HashSet::new(),
             paths_to_archive_input: String::new(),
             output_archive_path_input: String::new(),
             status_display: (Arc::new(Mutex::new(None)), String::new()),
@@ -72,17 +73,20 @@ macro_rules! display_archive
         if !$self.processing
         {
             $self.processing = true;
-            $self.archive_content_display.1 = String::new();
             let input_path = sanitize_path($input_path);
-            let result = Arc::clone(&$self.archive_content_display.0);
+            let result = Arc::clone(&$self.archive_content.0);
 
             thread::spawn(move ||
             {
                 let content = create_extractor_and_execute
                     (input_path, None, None, display_archive_content);
+                let paths = content
+                    .lines()
+                    .map(|line| line.to_string())
+                    .collect();
 
                 let mut result_lock = result.lock().unwrap();
-                *result_lock = Some(content)
+                *result_lock = Some(paths)
             });
 
             $self.processing = false;
@@ -96,9 +100,9 @@ impl eframe::App for Gui
     {
         egui::CentralPanel::default().show(ctx, |ui|
         {
-            if let Some(display) = self.archive_content_display.0.lock().unwrap().take()
+            if let Some(display) = self.archive_content.0.lock().unwrap().take()
             {
-                self.archive_content_display.1 = display;
+                self.archive_content.1 = display;
             }
 
             if let Some(display) = self.status_display.0.lock().unwrap().take()
@@ -138,13 +142,31 @@ impl eframe::App for Gui
             ui.vertical(|ui|
             {
                 ui.label("Zawartość archiwum:");
-                ui.monospace(&self.archive_content_display.1);
-            });
+                egui::ScrollArea::vertical().show(ui, |ui|
+                {
+                    ui.vertical(|ui|
+                    {
+                        for path in self.archive_content.1.iter()
+                        {
+                            let is_selected = self.selected_archive_items.contains(path);
+                            let response = ui.selectable_label(is_selected, path);
 
-            ui.vertical(|ui|
-            {
-                ui.add(egui::TextEdit::multiline(&mut self.choose_files_to_extract_input)
-                    .hint_text("Wybrane ścieżki do wypakowania..."));
+                            if response.clicked()
+                            {
+                                if is_selected
+                                {
+                                    // Unclick
+                                    self.selected_archive_items.remove(path);
+                                }
+                                else
+                                {
+                                    // Click
+                                    self.selected_archive_items.insert(path.clone());
+                                }
+                            }
+                        }
+                    })
+                })
             });
 
             ui.horizontal(|ui|
@@ -164,7 +186,16 @@ impl eframe::App for Gui
 
                     let input_path = sanitize_path(&self.input_archive_path_input);
                     let output_directory = sanitize_path(&self.output_directory_input);
-                    let chosen_paths = parse_paths(&self.choose_files_to_extract_input);
+
+
+                    // Get chosen_paths from clicked position of the selection menu
+                    // and remove everything after the actual path,
+                    // e.g., "Some", "None" and all that shit.
+                    let chosen_paths = self.selected_archive_items.clone()
+                        .into_iter()
+                        .map(|s| s.clone().split_once(' ')
+                            .map_or(s, |(before, _)| before.to_string()))
+                        .collect();
 
                     spawn_thread!(self, status_display,
                     {
