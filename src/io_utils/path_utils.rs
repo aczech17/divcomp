@@ -41,7 +41,7 @@ pub fn sanitize_output_path(path: &String) -> String
     }
 }
 
-pub fn get_display_paths(paths: &Vec<String>) -> HashMap<String, String>
+pub fn get_display_paths(paths: &[String]) -> HashMap<String, String>
 {
     paths.iter().map(|path|
     {
