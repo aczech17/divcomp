@@ -1,6 +1,9 @@
+mod util;
+use crate::gui::util::MultithreadedData;
+use crate::{spawn_thread, display_archive};
+
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
-use std::sync::{Arc, Mutex};
 use std::thread;
 use eframe::egui;
 use rfd::FileDialog;
@@ -9,45 +12,6 @@ use crate::compress::{archive_and_compress, CompressionMethod};
 use crate::compress::CompressionMethod::{HUFFMAN, LZ77};
 use crate::io_utils::path_utils::{sanitize_output_path, sanitize_path, get_display_paths};
 use crate::io_utils::path_utils::ARCHIVE_EXTENSION;
-
-struct MultithreadedData<T>
-{
-    pub result: Arc<Mutex<Option<T>>>,
-    content: T,
-}
-
-impl<T> MultithreadedData<T>
-{
-    fn new(content: T) -> Self
-    {
-        Self
-        {
-            result: Arc::new(Mutex::new(None)),
-            content,
-        }
-    }
-
-    fn set_new_content(&mut self) -> bool
-    {
-        if let Some(content) = self.result.lock().unwrap().take()
-        {
-            self.content = content;
-            return true;
-        }
-
-        false
-    }
-
-    fn set_content(&mut self, value: T)
-    {
-        self.content = value;
-    }
-
-    fn get_content(&self) -> &T
-    {
-        &self.content
-    }
-}
 
 pub struct Gui
 {
@@ -98,54 +62,6 @@ impl Gui
             .save_file()
         {
             self.output_archive_path = path.to_str().unwrap().to_string();
-        }
-    }
-}
-
-macro_rules! spawn_thread
-{
-    ($self: ident, $result_variable: ident, $code: block) =>
-    {
-        $self.processing = true;
-
-        let exec_result = Arc::clone(&$self.$result_variable.result);
-
-        thread::spawn(move ||
-        {
-            let result = $code;
-
-            let mut exec_result_lock = exec_result.lock().unwrap();
-            *exec_result_lock = Some(result);
-        });
-        $self.processing = false;
-    };
-}
-
-macro_rules! display_archive
-{
-    ($self: ident, $input_path:expr) =>
-    {
-        if !$self.processing
-        {
-            $self.processing = true;
-            let input_path = sanitize_path($input_path);
-            let result = Arc::clone(&$self.archive_content.result);
-
-            thread::spawn(move ||
-            {
-                let content = create_extractor_and_execute
-                    (input_path, None, None, display_archive_content);
-                let paths: Vec<String> = content
-                    .lines()
-                    .map(|line| line.to_string())
-                    .collect();
-
-
-                let mut result_lock = result.lock().unwrap();
-                *result_lock = Some(paths)
-            });
-
-            $self.processing = false;
         }
     }
 }
