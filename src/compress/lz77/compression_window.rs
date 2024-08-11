@@ -135,7 +135,7 @@ impl CompressionWindow
         for prefix_len in (1..short_len).rev()
         {
             let short_prefix = &data[short_start.. short_start + prefix_len];
-            let haystack = &data[0..=short_start - 1 + prefix_len];
+            let haystack = &data[0..short_start - 1 + prefix_len];
 
             if let Some(index) = Self::find_last_occurence(short_prefix, haystack)
             {
