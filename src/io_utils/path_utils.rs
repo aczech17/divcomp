@@ -46,7 +46,11 @@ pub fn get_display_paths(paths: &[String]) -> HashMap<String, String>
 {
     let mut indented_paths: HashMap<String, String> = paths.iter().map(|path|
     {
-        let truncated_path = path.split_whitespace().next().unwrap_or(path);
+        let truncated_path = match path.rfind(' ')
+        {
+            Some(index) => &path[..index],
+            None => path,
+        };
 
         let slash_count = truncated_path.matches('/').count();
         let indent = " ".repeat(slash_count * 4); // 4 spaces for one level
