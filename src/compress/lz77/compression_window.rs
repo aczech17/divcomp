@@ -72,6 +72,39 @@ impl CompressionWindow
         [long_buffer, short_buffer].concat()
     }
 
+    fn find_last_occurence(pattern: &[u8], text: &[u8]) -> Option<usize>
+    {
+        if pattern.is_empty() || text.is_empty() || pattern.len() > text.len()
+        {
+            return None;
+        }
+
+        // If a byte is not present in the pattern, make the shift of pattern length.
+        let mut mismatch_shift = vec![pattern.len(); 256];
+        for (i, &b) in pattern.iter().enumerate()
+        {
+            mismatch_shift[b as usize] = pattern.len() - i - 1;
+        }
+
+        let mut i = text.len() - 1;
+        while i >= pattern.len() - 1
+        {
+            let possible_match = &text[i - (pattern.len() - 1)..=i];
+            if possible_match == pattern
+            {
+                return Some(i - (pattern.len() - 1));
+            }
+
+            // i -= mismatch_shift[text[i] as usize];
+
+            // Shift the pattern to the left with proper offset.
+            // Use the saturating subtraction just to be sure.
+            i = i.saturating_sub(mismatch_shift[text[i] as usize]);
+        }
+
+        None
+    }
+
     pub fn find_longest_prefix(&self)
         ->
         (
@@ -102,17 +135,14 @@ impl CompressionWindow
         for prefix_len in (1..short_len).rev()
         {
             let short_prefix = &data[short_start.. short_start + prefix_len];
+            let haystack = &data[0..short_start - 1 + prefix_len];
 
-            for start_index in (0..long_len).rev() // Looking for the last occurence.
+            if let Some(index) = Self::find_last_occurence(short_prefix, haystack)
             {
-                let potential_match = &data[start_index..start_index + prefix_len];
-                if potential_match == short_prefix
-                {
-                    let next_after = data.get(short_start + prefix_len).cloned();
-                    let index = short_start - start_index;
+                let next_after = data.get(short_start + prefix_len).cloned();
+                let offset = short_start - index;
 
-                    return (index, prefix_len, next_after);
-                }
+                return (offset, prefix_len, next_after);
             }
         }
 
