@@ -1,13 +1,13 @@
-use std::fs;
-use std::path::Path;
 use crate::archive::pack::pack;
 use crate::compress::lz77::LZ77Compressor;
 use crate::io_utils::byte_writer;
+use std::fs;
+use std::path::Path;
 
 pub mod lz77;
 pub mod huffman;
 use crate::compress::huffman::HuffmanCompressor;
-use crate::io_utils::path_utils::get_tmp_file_path;
+use crate::io_utils::path_utils::create_tmp_file;
 
 #[allow(clippy::upper_case_acronyms)] // Clippy thinks HUFFMAN is an acronym.
 #[derive(Clone, Copy, PartialEq)]
@@ -36,7 +36,7 @@ pub trait Decompress
     fn ignore(&mut self, bytes_count: usize) -> Result<(), DecompressionError>;
 }
 
-pub fn archive_and_compress
+pub fn pack_and_compress
 (
     input_paths: Vec<String>,
     archive_filename: String,
@@ -49,9 +49,10 @@ pub fn archive_and_compress
         return Err("Path already exists.".to_string());
     }
 
-    let tmp_file_name = get_tmp_file_path(".unarch")
-        .ok_or("Could not find a proper name for a temporary file while archiving.")?;
-    pack(input_paths, tmp_file_name.clone())?;
+    let (tmp_file, tmp_file_name) = create_tmp_file(".unarch")
+        .ok_or("Could not create a temporary file while archiving.")?;
+
+    pack(input_paths, tmp_file)?;
 
 
     let compressor: Box<dyn Compress> = match compression_method

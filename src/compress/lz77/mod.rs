@@ -35,7 +35,10 @@ impl Compress for LZ77Compressor
         let input = UniversalReader::new(input_file);
         let mut window = CompressionWindow::new(input);
 
-        let mut output = ByteWriter::new(output_filename)?;
+        let output_file = File::create(output_filename)
+            .map_err(|_| String::from("Could not create output file for LZ77."))?;
+
+        let mut output = ByteWriter::new(output_file)?;
 
         let signature_bytes: Vec<u8> = LZ77_SIGNATURE.to_be_bytes()
             .into_iter()
@@ -90,7 +93,7 @@ impl LZ77Decompressor
 
             match input.read_byte()
             {
-                Some(byte_after) => decompression_buffer.push_byte(byte_after),
+                Some(byte_after) => decompression_buffer.push_byte(byte_after)?,
                 None => break,
             };
         }
@@ -121,7 +124,8 @@ impl Decompress for LZ77Decompressor
     {
         let range = self.bytes_decompressed..self.bytes_decompressed + bytes_to_get;
 
-        let bytes = self.decompression_buffer.get_slice_of_data(range);
+        let bytes =
+            self.decompression_buffer.get_slice_of_data(range)?;
         self.bytes_decompressed += bytes_to_get;
 
         Ok(bytes)

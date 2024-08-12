@@ -4,7 +4,7 @@ use crate::io_utils::get_memory_buffers_size;
 
 pub struct ByteWriter
 {
-    file_handle: File,
+    output_file: File,
     buffer: Vec<u8>,
     buffer_size: usize,
     bytes_in_buffer: usize,
@@ -12,16 +12,13 @@ pub struct ByteWriter
 
 impl ByteWriter
 {
-    pub fn new(output_filename: &str) -> Result<ByteWriter, String>
+    pub fn new(output_file: File) -> Result<ByteWriter, String>
     {
-        let file_handle = File::create(output_filename)
-            .map_err(|_| format!("Could not create file buffer for {}.", output_filename))?;
         let buffer_size = get_memory_buffers_size();
-
 
         let byte_buffer = ByteWriter
         {
-            file_handle,
+            output_file,
             buffer: vec![0; buffer_size],
             buffer_size,
             bytes_in_buffer: 0,
@@ -34,7 +31,7 @@ impl ByteWriter
     {
         if self.bytes_in_buffer > 0
         {
-            self.file_handle.write_all(&self.buffer[0..self.bytes_in_buffer])
+            self.output_file.write_all(&self.buffer[0..self.bytes_in_buffer])
                 .unwrap();
             self.bytes_in_buffer = 0;
         }

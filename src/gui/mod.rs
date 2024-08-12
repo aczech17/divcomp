@@ -8,7 +8,7 @@ use std::thread;
 use eframe::egui;
 use rfd::FileDialog;
 use crate::archive::{create_extractor_and_execute, display_archive_content, extract_archive};
-use crate::compress::{archive_and_compress, CompressionMethod};
+use crate::compress::{pack_and_compress, CompressionMethod};
 use crate::compress::CompressionMethod::{HUFFMAN, LZ77};
 use crate::io_utils::path_utils::{sanitize_output_path, sanitize_path, get_display_paths};
 use crate::io_utils::path_utils::ARCHIVE_EXTENSION;
@@ -329,7 +329,7 @@ impl eframe::App for Gui
 
                             spawn_thread!(self, status_display,
                             {
-                                match archive_and_compress(input_paths, output_path, compression_method)
+                                match pack_and_compress(input_paths, output_path, compression_method)
                                 {
                                     Ok(_) => "Spakowano.".to_string(),
                                     Err(err_msg) => err_msg,

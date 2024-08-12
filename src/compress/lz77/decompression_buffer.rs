@@ -1,17 +1,22 @@
 use crate::compress::DecompressionError;
+use crate::io_utils::path_utils::create_tmp_file;
 use std::fs;
-use std::fs::{File, OpenOptions};
+use std::fs::File;
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::ops::Range;
-use std::path::Path;
-use crate::io_utils::path_utils::get_tmp_file_path;
 
+
+#[cfg(debug_assertions)]
+const BUFFER_SIZE: usize = 1;
+
+#[cfg(not(debug_assertions))]
 const BUFFER_SIZE: usize = 1 << 27;
+
 
 pub struct DecompressionBuffer
 {
     memory: Vec<u8>,
-    reserve_buffer_name: String,
+    reserve_file: Option<(File, String)>,
     buffer_size_total: usize,
 }
 
@@ -19,13 +24,10 @@ impl DecompressionBuffer
 {
     pub fn new() -> Result<DecompressionBuffer, DecompressionError>
     {
-        let reserve_buffer_name = get_tmp_file_path(".resbuf")
-            .ok_or(DecompressionError::Other)?;
-
         let buffer = DecompressionBuffer
         {
             memory: Vec::with_capacity(BUFFER_SIZE),
-            reserve_buffer_name,
+            reserve_file: None,
             buffer_size_total: 0,
         };
 
@@ -42,7 +44,7 @@ impl DecompressionBuffer
             return Ok(());
         }
 
-        let repeats_count = length / offset; // Sequence may be repeated...
+        let repeats_count = length / offset; // A sequence may be repeated...
         let reminder = length % offset;      // ...partially
 
         let mut decompressed_bytes = Vec::new();
@@ -52,8 +54,8 @@ impl DecompressionBuffer
             // and we join it n times.
 
             let repeated_buffer_part =
-                self.get_slice_of_data(self.buffer_size_total - offset..self.buffer_size_total);
-            //let repeated_buffer_part = &self.memory[self.memory.len() - offset..];
+                self.get_slice_of_data(self.buffer_size_total - offset..self.buffer_size_total)?;
+
             for _ in 0..repeats_count
             {
                 decompressed_bytes.extend(repeated_buffer_part.iter().cloned());
@@ -64,46 +66,61 @@ impl DecompressionBuffer
         let reminder_range_start = self.buffer_size_total - offset;
         let reminder_range_stop = reminder_range_start + reminder;
         let reminder_range = reminder_range_start..reminder_range_stop;
-        let mut reminder_buffer_part = self.get_slice_of_data(reminder_range);
+        let mut reminder_buffer_part =
+            self.get_slice_of_data(reminder_range)?;
         decompressed_bytes.append(&mut reminder_buffer_part);
 
         // Now we have a bunch of decompressed bytes. Let's push them to the buffer.
         for byte in decompressed_bytes
         {
-            self.push_byte(byte);
+            self.push_byte(byte)?;
         }
 
         Ok(())
     }
 
-    pub fn push_byte(&mut self, value: u8)
+    fn dump_to_reserve_file(&mut self) -> Result<(), DecompressionError>
+    {
+        if self.reserve_file.is_none()
+        {
+            let file = create_tmp_file(".resbuf")
+                .ok_or(DecompressionError::Other)?;
+
+            self.reserve_file = Some(file);
+        };
+
+        let (reserve_file, _name) = self.reserve_file
+            .as_mut()
+            .unwrap();
+
+        reserve_file.write_all(&self.memory)
+            .expect("Could not write to the reserve file.");
+
+        self.memory.clear();
+
+        Ok(())
+    }
+
+    pub fn push_byte(&mut self, value: u8) -> Result<(), DecompressionError>
     {
         if self.memory.len() == BUFFER_SIZE
         {
-            let mut reserve_file = OpenOptions::new()
-                .create(true)
-                .append(true)
-                .open(&self.reserve_buffer_name)
-                .expect("Could not open the reserve file.");
-
-            reserve_file.write_all(&self.memory)
-                .expect("Could not write to the reserve file.");
-
-            self.memory.clear();
+            self.dump_to_reserve_file()?;
         }
 
         self.memory.push(value);
         self.buffer_size_total += 1;
+
+        Ok(())
     }
 
-    fn read_data_from_reserve_file(&self, offset_from_end: i64, length: usize) -> Vec<u8>
+    fn read_data_from_reserve_file(&mut self, offset_from_end: i64, length: usize)
+        -> Result<Vec<u8>, DecompressionError>
     {
-        let mut file = OpenOptions::new()
-            .read(true)
-            .write(true)
-            .create(false)
-            .open(&self.reserve_buffer_name)
-            .expect("Could not read from the reserve file.");
+        let (file, _name) = self.reserve_file
+            .as_mut()
+            .unwrap();
+
 
         let mut data = vec![0; length];
 
@@ -113,10 +130,11 @@ impl DecompressionBuffer
         file.seek(SeekFrom::End(0))
             .unwrap();
 
-        data
+        Ok(data)
     }
 
-    pub fn get_slice_of_data(&self, range: Range<usize>) -> Vec<u8>
+    pub fn get_slice_of_data(&mut self, range: Range<usize>)
+        -> Result<Vec<u8>, DecompressionError>
     {
         let start = range.start;
         let length = range.len();
@@ -132,7 +150,7 @@ impl DecompressionBuffer
             let memory_end = memory_start + length;
 
             let data = self.memory[memory_start..memory_end].to_vec();
-            return data;
+            return Ok(data);
         }
 
         if length <= offset_in_file as usize // All the needed data is in the file.
@@ -144,17 +162,19 @@ impl DecompressionBuffer
 
         // Read the file to the end.
         let length_in_file = offset_in_file as usize;
-        let data_from_file = self.read_data_from_reserve_file(offset_in_file, length_in_file);
+        let data_from_file =
+            self.read_data_from_reserve_file(offset_in_file, length_in_file)?;
 
         // Read the rest of the data from the memory.
         let length_in_memory = length - length_in_file;
         let data_from_memory = self.memory[0..length_in_memory].to_vec();
 
         // Join the 2 parts and return.
-        [data_from_file, data_from_memory].concat()
+        let slice_of_data = [data_from_file, data_from_memory].concat();
+        Ok(slice_of_data)
     }
 
-    pub fn write_bytes_to_file(&self, range: Range<usize>, output_filename: &str)
+    pub fn write_bytes_to_file(&mut self, range: Range<usize>, output_filename: &str)
         -> Result<(), DecompressionError>
     {
         let start = range.start;
@@ -168,7 +188,7 @@ impl DecompressionBuffer
         {
             let from = start + i * BUFFER_SIZE;
             let to = from + BUFFER_SIZE;
-            let portion = self.get_slice_of_data(from..to);
+            let portion = self.get_slice_of_data(from..to)?;
 
             file.write_all(&portion)
                 .map_err(|_| DecompressionError::Other)?;
@@ -176,7 +196,7 @@ impl DecompressionBuffer
 
         let from = start + iterations * BUFFER_SIZE;
         let to = range.end;
-        let portion = self.get_slice_of_data(from..to);
+        let portion = self.get_slice_of_data(from..to)?;
 
         file.write_all(&portion)
             .map_err(|_| DecompressionError::Other)
@@ -187,9 +207,9 @@ impl Drop for DecompressionBuffer
 {
     fn drop(&mut self)
     {
-        if Path::new(&self.reserve_buffer_name).exists()
+        if let Some((_file, path)) = &self.reserve_file
         {
-            fs::remove_file(&self.reserve_buffer_name)
+            fs::remove_file(path)
                 .expect("Could not remove temporary reserve file for the buffer.");
         }
     }

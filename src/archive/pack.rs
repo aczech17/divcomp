@@ -21,7 +21,7 @@ fn save_file_to_archive(file_path: &str, output: &mut ByteWriter) -> Result<(), 
     Ok(())
 }
 
-pub fn pack(input_paths: Vec<String>, output_filename: String) -> Result<(), String>
+pub fn pack(input_paths: Vec<String>, output_file: File) -> Result<(), String>
 {
     let all_directory_infos: Vec<DirectoryInfo> = input_paths.iter()
         .map(|path| DirectoryInfo::new(path))
@@ -30,7 +30,7 @@ pub fn pack(input_paths: Vec<String>, output_filename: String) -> Result<(), Str
     let archive_header = ArchiveHeader::new(all_directory_infos)
         .map_err(|_| "Could not create archive header.")?;
 
-    let mut output_writer = ByteWriter::new(&output_filename)?;
+    let mut output_writer = ByteWriter::new(output_file)?;
 
     for byte in archive_header.to_bytes()
     {

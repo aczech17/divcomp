@@ -135,12 +135,15 @@ impl HuffmanDecompressor
         let mut potential_file_writer = match output_filename
         {
             Some(filename) =>
-                {
-                    let writer = ByteWriter::new(&filename)
-                        .map_err(|_| DecompressionError::Other)?;
+            {
+                let file = File::create(filename)
+                    .map_err(|_| DecompressionError::FileCreationError)?;
 
-                    Some(writer)
-                }
+                let writer = ByteWriter::new(file)
+                    .map_err(|_| DecompressionError::Other)?;
+
+                Some(writer)
+            }
 
             None => None,
         };

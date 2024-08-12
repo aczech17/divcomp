@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::env;
+use std::fs::File;
 use std::path::Path;
 use rand::Rng;
 
@@ -74,7 +75,7 @@ pub fn get_display_paths(paths: &[String]) -> HashMap<String, String>
     indented_paths
 }
 
-pub fn get_tmp_file_path(extension: &str) -> Option<String>
+pub fn create_tmp_file(extension: &str) -> Option<(File, String)>
 {
     let tmp_directory = if cfg!(unix)
     {
@@ -98,9 +99,9 @@ pub fn get_tmp_file_path(extension: &str) -> Option<String>
             .collect();
         let path = format!("{tmp_directory}/{filename}{extension}");
 
-        if !Path::new(&path).exists()
+        if let Ok(file) = File::create(&path)
         {
-            return Some(path);
+            return Some((file, path));
         }
     }
 
