@@ -1,3 +1,4 @@
+use std::fmt::Display;
 use crate::io_utils::FileInfo;
 use crate::archive::pack::pack;
 use crate::compress::lz77::LZ77Compressor;
@@ -17,24 +18,9 @@ pub enum CompressionMethod
     HUFFMAN, LZ77,
 }
 
-#[derive(Debug)]
-pub enum DecompressionError
-{
-    EmptyFile, BadFormat, FileTooShort, FileOpenError, FileCreationError, Other,
-}
-
 pub trait Compress
 {
     fn compress(&self, input_filename: &str, output_filename: &str) -> Result<(), String>;
-}
-
-pub trait Decompress
-{
-    fn decompress_bytes_to_memory(&mut self, bytes_to_get: usize)
-        -> Result<Vec<u8>, DecompressionError>;
-    fn decompress_bytes_to_file(&mut self, output_filename: &str, count: usize)
-        -> Result<(), DecompressionError>;
-    fn ignore(&mut self, bytes_count: usize) -> Result<(), DecompressionError>;
 }
 
 pub fn pack_and_compress
@@ -74,15 +60,36 @@ pub fn pack_and_compress
     compress_result
 }
 
-
-pub fn decompress_error_to_string(error: DecompressionError) -> String
+pub trait Decompress
 {
-    match error
+    fn decompress_bytes_to_memory(&mut self, bytes_to_get: usize)
+                                  -> Result<Vec<u8>, DecompressionError>;
+    fn decompress_bytes_to_file(&mut self, output_filename: &str, count: usize)
+                                -> Result<(), DecompressionError>;
+    fn ignore(&mut self, bytes_count: usize) -> Result<(), DecompressionError>;
+}
+
+#[derive(Debug)]
+pub enum DecompressionError
+{
+    BadFormat,
+    FileOpenError,
+    FileCreationError,
+    Other,
+}
+
+impl Display for DecompressionError
+{
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result
     {
-        DecompressionError::BadFormat | DecompressionError::EmptyFile | DecompressionError::FileTooShort
-        => "Nieprawidłowy plik z archiwum.",
-        DecompressionError::FileOpenError => "Nie udało się otworzyć pliku.",
-        DecompressionError::FileCreationError => "Nie udało się utworzyć pliku.",
-        DecompressionError::Other => "Błąd dekompresji.",
-    }.to_string()
+        let message = match self
+        {
+            DecompressionError::BadFormat           => "Nieprawidłowy plik z archiwum.",
+            DecompressionError::FileOpenError       => "Nie udało się otworzyć pliku.",
+            DecompressionError::FileCreationError   => "Nie udało się utworzyć pliku.",
+            DecompressionError::Other               => "Błąd dekompresji.",
+        }.to_string();
+
+        write!(formatter, "{}", message)
+    }
 }

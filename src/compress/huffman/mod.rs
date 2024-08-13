@@ -88,7 +88,7 @@ impl HuffmanDecompressor
 
         if input_file_size == 0
         {
-            return Err(DecompressionError::EmptyFile);
+            return Err(DecompressionError::BadFormat);
         }
 
         let mut file_reader = UniversalReader::new(input_file);
@@ -152,7 +152,7 @@ impl HuffmanDecompressor
         while bytes_decompressed < bytes_count
         {
             let bit = self.file_reader.read_bit()
-                .ok_or(DecompressionError::FileTooShort)?;
+                .ok_or(DecompressionError::BadFormat)?;
             potential_codeword.push_bit(bit);
 
             if let Some(byte) = self.get_byte_from_codeword(&potential_codeword)

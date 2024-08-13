@@ -1,17 +1,17 @@
 mod util;
 use crate::gui::util::MultithreadedData;
-use crate::{spawn_thread, display_archive};
+use crate::{display_archive, spawn_thread};
 
+use crate::archive::extractor::Extractor;
+use crate::compress::CompressionMethod::{HUFFMAN, LZ77};
+use crate::compress::{pack_and_compress, CompressionMethod};
+use crate::io_utils::path_utils::ARCHIVE_EXTENSION;
+use crate::io_utils::path_utils::{get_display_paths, sanitize_output_path, sanitize_path};
+use eframe::egui;
+use rfd::FileDialog;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::thread;
-use eframe::egui;
-use rfd::FileDialog;
-use crate::archive::{create_extractor_and_execute, display_archive_content, extract_archive};
-use crate::compress::{pack_and_compress, CompressionMethod};
-use crate::compress::CompressionMethod::{HUFFMAN, LZ77};
-use crate::io_utils::path_utils::{sanitize_output_path, sanitize_path, get_display_paths};
-use crate::io_utils::path_utils::ARCHIVE_EXTENSION;
 
 pub struct Gui
 {
@@ -213,31 +213,59 @@ impl eframe::App for Gui
                                 return;
                             }
 
-                            self.processing = true;
-                            self.status_display.set_content(String::from("Wypakowywanie..."));
-
                             let input_path = sanitize_path(&self.input_archive_path);
                             let output_directory = sanitize_path(&self.output_directory);
-
 
                             // Get chosen_paths from clicked position of the selection menu
                             // and remove everything after the actual path,
                             // e.g., "Some", "None" and all that shit.
-                            let chosen_paths = self.selected_archive_items.clone()
+                            let chosen_paths: Vec<String> = self.selected_archive_items.clone()
                                 .into_iter()
                                 .map(|s| s.clone().split_once(' ')
                                     .map_or(s, |(before, _)| before.to_string()))
                                 .collect();
 
+                            if chosen_paths.is_empty()
+                            {
+                                self.status_display
+                                    .set_content(String::from("Wybierz pliki do wypakowania."));
+                                return;
+                            }
+
+                            if input_path.is_empty()
+                            {
+                                self.status_display
+                                    .set_content(String::from("Podaj ścieżkę archiwum."));
+                                return;
+                            }
+
+                            if output_directory.is_empty()
+                            {
+                                self.status_display
+                                    .set_content(String::from("Podaj ścieżkę do wypakowania."));
+                                return;
+                            }
+
+                            self.processing = true;
+                            self.status_display.set_content(String::from("Wypakowywanie..."));
+
+
+
+
                             spawn_thread!(self, status_display,
                             {
-                                create_extractor_and_execute
-                                (
-                                    input_path,
-                                    Some(chosen_paths),
-                                    Some(output_directory),
-                                    extract_archive
-                                )
+                                match Extractor::new(input_path)
+                                {
+                                    Ok(mut extractor) =>
+                                    {
+                                        match extractor.extract_paths(chosen_paths, output_directory)
+                                        {
+                                            Ok(_) => "Wypakowano".to_string(),
+                                            Err(err) => err.to_string(),
+                                        }
+                                    }
+                                    Err(err) => err.to_string(),
+                                }
                             });
                         }
                     });

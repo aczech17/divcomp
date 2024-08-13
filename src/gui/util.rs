@@ -75,13 +75,16 @@ macro_rules! display_archive
 
             thread::spawn(move ||
             {
-                let content = create_extractor_and_execute
-                    (input_path, None, None, display_archive_content);
+                let content = match Extractor::new(input_path)
+                {
+                    Ok(extractor) => extractor.to_string(),
+                    Err(err) => err.to_string(),
+                };
+
                 let paths: Vec<String> = content
                     .lines()
                     .map(|line| line.to_string())
                     .collect();
-
 
                 let mut result_lock = result.lock().unwrap();
                 *result_lock = Some(paths)

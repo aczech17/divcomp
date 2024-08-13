@@ -1,3 +1,4 @@
+use std::fmt::{Display, Formatter};
 use std::fs::{create_dir, create_dir_all, File};
 use std::io::Read;
 use std::path::Path;
@@ -37,7 +38,7 @@ impl Extractor
 
         let mut signature: Vec<u8> = vec![0; huffman_signature.len()];
         archive_file.read(&mut signature)
-            .map_err(|_| DecompressionError::FileTooShort)?;
+            .map_err(|_| DecompressionError::BadFormat)?;
 
 
         let mut decompressor: Box<dyn Decompress> = if signature == huffman_signature
@@ -87,39 +88,6 @@ impl Extractor
         &self.archive_info
     }
 
-    pub fn extract_all(&mut self, output_directory: String) -> Result<(), DecompressionError>
-    {
-        create_dir_all(&output_directory)
-            .map_err(|_| DecompressionError::Other)?;
-
-        for (path, size) in &self.archive_info
-        {
-            let output_path = match output_directory.as_str()
-            {
-                "" => path.to_string(),
-                directory => format!("{}/{}", directory, path),
-            };
-
-            if Path::new(&output_path).exists()
-            {
-                if let Some(bytes_count) = size
-                {
-                    self.decompressor.ignore(*bytes_count as usize)?;
-                }
-                continue;
-            }
-
-            match size
-            {
-                None => create_dir(output_path).map_err(|_| DecompressionError::Other)?,
-                Some(size) =>
-                    self.decompressor.decompress_bytes_to_file(&output_path, *size as usize)?,
-            }
-        }
-
-        Ok(())
-    }
-
     pub fn extract_paths(&mut self, paths_to_extract: Vec<String>, output_directory: String)
         -> Result<(), DecompressionError>
     {
@@ -148,11 +116,7 @@ impl Extractor
                     let path_stripped = path.strip_prefix(&superpath_to_be_stripped)
                         .expect("Bad path stripping.")
                         .to_string();
-                    let output_path = match output_directory.as_str()
-                    {
-                        "" => path_stripped,    // this folder
-                        directory => format!("{}/{}", directory, path_stripped),
-                    };
+                    let output_path = format!("{}/{}", output_directory, path_stripped);
 
                     if Path::new(&output_path).exists()
                     {
@@ -172,5 +136,19 @@ impl Extractor
         }
 
         Ok(())
+    }
+}
+
+impl Display for Extractor
+{
+    fn fmt(&self, formatter: &mut Formatter<'_>) -> std::fmt::Result
+    {
+        let content = self.get_archive_info()
+            .iter()
+            .map(|(path, size)| format!("{} {:?}", path, size))
+            .collect::<Vec<String>>()
+            .join("\n");
+
+        write!(formatter, "{}", content)
     }
 }
