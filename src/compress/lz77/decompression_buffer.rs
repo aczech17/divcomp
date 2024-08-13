@@ -1,5 +1,5 @@
 use crate::compress::DecompressionError;
-use crate::io_utils::path_utils::create_tmp_file;
+use crate::io_utils::{create_tmp_file, FileInfo};
 use std::fs;
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom, Write};
@@ -16,7 +16,7 @@ const BUFFER_SIZE: usize = 1 << 27;
 pub struct DecompressionBuffer
 {
     memory: Vec<u8>,
-    reserve_file: Option<(File, String)>,
+    reserve_file: Option<FileInfo>,
     buffer_size_total: usize,
 }
 
@@ -89,11 +89,11 @@ impl DecompressionBuffer
             self.reserve_file = Some(file);
         };
 
-        let (reserve_file, _name) = self.reserve_file
+        let FileInfo {handle: file, .. } = self.reserve_file
             .as_mut()
-            .unwrap();
+            .unwrap();  // We are sure the file is already created, so we can unwrap.
 
-        reserve_file.write_all(&self.memory)
+        file.write_all(&self.memory)
             .expect("Could not write to the reserve file.");
 
         self.memory.clear();
@@ -117,10 +117,9 @@ impl DecompressionBuffer
     fn read_data_from_reserve_file(&mut self, offset_from_end: i64, length: usize)
         -> Result<Vec<u8>, DecompressionError>
     {
-        let (file, _name) = self.reserve_file
+        let FileInfo{handle: file, .. } = self.reserve_file
             .as_mut()
             .unwrap();
-
 
         let mut data = vec![0; length];
 
@@ -207,8 +206,10 @@ impl Drop for DecompressionBuffer
 {
     fn drop(&mut self)
     {
-        if let Some((_file, path)) = &self.reserve_file
+        if let Some(file_info) = &self.reserve_file
         {
+            let FileInfo{path,..} = file_info;
+
             fs::remove_file(path)
                 .expect("Could not remove temporary reserve file for the buffer.");
         }

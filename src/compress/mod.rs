@@ -1,3 +1,4 @@
+use crate::io_utils::FileInfo;
 use crate::archive::pack::pack;
 use crate::compress::lz77::LZ77Compressor;
 use crate::io_utils::byte_writer;
@@ -7,7 +8,7 @@ use std::path::Path;
 pub mod lz77;
 pub mod huffman;
 use crate::compress::huffman::HuffmanCompressor;
-use crate::io_utils::path_utils::create_tmp_file;
+use crate::io_utils::create_tmp_file;
 
 #[allow(clippy::upper_case_acronyms)] // Clippy thinks HUFFMAN is an acronym.
 #[derive(Clone, Copy, PartialEq)]
@@ -49,7 +50,12 @@ pub fn pack_and_compress
         return Err("Path already exists.".to_string());
     }
 
-    let (tmp_file, tmp_file_name) = create_tmp_file(".unarch")
+    let FileInfo
+    {
+        handle: tmp_file,
+        path: tmp_file_path
+    }
+        = create_tmp_file(".unarch")
         .ok_or("Could not create a temporary file while archiving.")?;
 
     pack(input_paths, tmp_file)?;
@@ -60,10 +66,10 @@ pub fn pack_and_compress
         CompressionMethod::HUFFMAN => Box::new(HuffmanCompressor),
         CompressionMethod::LZ77  => Box::new(LZ77Compressor),
     };
-    let compress_result = compressor.compress(&tmp_file_name, &archive_filename);
+    let compress_result = compressor.compress(&tmp_file_path, &archive_filename);
 
-    fs::remove_file(&tmp_file_name)
-        .map_err(|_| format!("Could not remove the temporary file {}.", tmp_file_name))?;
+    fs::remove_file(&tmp_file_path)
+        .map_err(|_| format!("Could not remove the temporary file {}.", tmp_file_path))?;
 
     compress_result
 }

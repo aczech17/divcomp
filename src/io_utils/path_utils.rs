@@ -1,8 +1,5 @@
 use std::collections::HashMap;
-use std::env;
-use std::fs::File;
 use std::path::Path;
-use rand::Rng;
 
 pub const ARCHIVE_EXTENSION: &str = "xca";
 
@@ -79,35 +76,3 @@ pub fn get_display_paths(paths: &[String]) -> HashMap<String, String>
     indented_paths
 }
 
-pub fn create_tmp_file(extension: &str) -> Option<(File, String)>
-{
-    let tmp_directory = if cfg!(unix)
-    {
-        "/tmp".to_string()
-    }
-    else
-    {
-        env::var("TEMP").unwrap_or_else(|_| String::from("."))
-    };
-
-    const FILENAME_SIZE: usize = 10;
-    const MAX_ATTEMPTS_COUNT: usize = 10;
-
-    let mut rng = rand::thread_rng();
-
-    for _ in 0..MAX_ATTEMPTS_COUNT
-    {
-        let filename: String = (0..FILENAME_SIZE)
-            .map(|_| rng.sample(rand::distr::Alphanumeric))
-            .map(char::from)
-            .collect();
-        let path = format!("{tmp_directory}/{filename}{extension}");
-
-        if let Ok(file) = File::create(&path)
-        {
-            return Some((file, path));
-        }
-    }
-
-    None
-}

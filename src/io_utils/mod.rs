@@ -1,3 +1,6 @@
+use rand::Rng;
+use std::env;
+use std::fs::File;
 use sysinfo::System;
 
 pub mod byte_writer;
@@ -9,6 +12,12 @@ pub mod path_utils;
 
 pub const HUFFMAN_SIGNATURE: u64 = 0xAEFE48;
 pub const LZ77_SIGNATURE: u64 = 0xAEFE77;
+
+pub struct FileInfo
+{
+    pub handle: File,
+    pub path: String,
+}
 
 pub fn bytes_to_u64(bytes: Vec<u8>) -> u64
 {
@@ -25,3 +34,41 @@ pub fn get_memory_buffers_size() -> usize
     total_memory / 16
 }
 
+pub fn create_tmp_file(extension: &str) -> Option<FileInfo>
+{
+    let tmp_directory = if cfg!(unix)
+    {
+        "/tmp".to_string()
+    }
+    else
+    {
+        env::var("TEMP").unwrap_or_else(|_| String::from("."))
+    };
+
+    const FILENAME_SIZE: usize = 10;
+    const MAX_ATTEMPTS_COUNT: usize = 10;
+
+    let mut rng = rand::thread_rng();
+
+    for _ in 0..MAX_ATTEMPTS_COUNT
+    {
+        let filename: String = (0..FILENAME_SIZE)
+            .map(|_| rng.sample(rand::distr::Alphanumeric))
+            .map(char::from)
+            .collect();
+        let path = format!("{tmp_directory}/{filename}{extension}");
+
+        if let Ok(file) = File::create(&path)
+        {
+            let file_info = FileInfo
+            {
+                handle: file,
+                path,
+            };
+
+            return Some(file_info);
+        }
+    }
+
+    None
+}
