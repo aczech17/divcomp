@@ -1,4 +1,5 @@
 use std::sync::{Arc, Mutex};
+use eframe::egui::IconData;
 
 pub struct MultithreadedData<T>
 {
@@ -39,3 +40,20 @@ impl<T> MultithreadedData<T>
     }
 }
 
+pub fn load_icon() -> IconData
+{
+    let icon_bytes = include_bytes!("../../assets/icon.ico");
+    let image = image::load_from_memory(icon_bytes)
+        .expect("Failed to open icon path.")
+        .into_rgba8();
+
+    let (width, height) = image.dimensions();
+    let rgba = image.into_raw();
+
+    IconData
+    {
+        rgba,
+        width,
+        height,
+    }
+}

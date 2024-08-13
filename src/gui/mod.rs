@@ -1,5 +1,5 @@
 mod util;
-use util::MultithreadedData;
+use util::{MultithreadedData, load_icon};
 use std::collections::{HashMap, HashSet};
 use std::{path::Path, thread, sync::Arc};
 use crate::io_utils::path_utils::{ARCHIVE_EXTENSION, get_display_paths, sanitize_path, sanitize_output_path, is_a_subdirectory};
@@ -491,13 +491,17 @@ impl eframe::App for Gui
     }
 }
 
+
 pub fn run(window_name: &str, archive_argument: Option<String>) -> eframe::Result
 {
     env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
 
     let options = eframe::NativeOptions
     {
-        viewport: egui::ViewportBuilder::default().with_maximized(true),
+        viewport: egui::ViewportBuilder::default()
+            .with_maximized(true)
+            .with_icon(load_icon()),
+
         ..Default::default()
     };
 
