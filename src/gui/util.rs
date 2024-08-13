@@ -60,37 +60,3 @@ macro_rules! spawn_thread
         $self.processing = false;
     };
 }
-
-#[macro_export]
-macro_rules! display_archive
-{
-    ($self: ident, $input_path:expr) =>
-    {
-        use std::sync::Arc;
-        if !$self.processing
-        {
-            $self.processing = true;
-            let input_path = sanitize_path($input_path);
-            let result = Arc::clone(&$self.archive_content.result);
-
-            thread::spawn(move ||
-            {
-                let content = match Extractor::new(input_path)
-                {
-                    Ok(extractor) => extractor.to_string(),
-                    Err(err) => err.to_string(),
-                };
-
-                let paths: Vec<String> = content
-                    .lines()
-                    .map(|line| line.to_string())
-                    .collect();
-
-                let mut result_lock = result.lock().unwrap();
-                *result_lock = Some(paths)
-            });
-
-            $self.processing = false;
-        }
-    }
-}

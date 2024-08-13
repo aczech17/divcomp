@@ -1,6 +1,7 @@
 mod util;
+use crate::gui::egui::Ui;
 use crate::gui::util::MultithreadedData;
-use crate::{display_archive, spawn_thread};
+use crate::{spawn_thread};
 
 use crate::archive::extractor::Extractor;
 use crate::compress::CompressionMethod::{HUFFMAN, LZ77};
@@ -12,6 +13,8 @@ use rfd::FileDialog;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::thread;
+use std::sync::Arc;
+use eframe::egui::InnerResponse;
 
 pub struct Gui
 {
@@ -52,7 +55,7 @@ impl Default for Gui
     }
 }
 
-impl Gui
+impl Gui // packing
 {
     fn select_files_to_pack(&mut self)
     {
@@ -101,18 +104,138 @@ impl Gui
         }
     }
 
+    fn show_paths_to_pack(&mut self, ui: &mut Ui) -> InnerResponse<()>
+    {
+        ui.vertical(|ui|
+        {
+            let mut right_clicked_paths = Vec::new();
+
+            // Find paths that were right-clicked...
+            for path in &self.paths_to_pack
+            {
+                let path_label = ui.selectable_label(false, path);
+                if path_label.hovered() && ui.input(|i| i.pointer.secondary_clicked())
+                {
+                    right_clicked_paths.push(path.clone());
+                }
+            }
+
+            // ... and remove them.
+            for right_clicked_path in right_clicked_paths
+            {
+                self.paths_to_pack.retain(|path| path != &right_clicked_path);
+            }
+        })
+    }
+
+    fn do_packing(&mut self)
+    {
+        if self.processing
+        {
+            return;
+        }
+
+        let input_paths = self.paths_to_pack.clone();
+
+        for path in &input_paths
+        {
+            if !Path::new(path).exists()
+            {
+                self.status_display.set_content(format!("Plik {} nie istnieje.", path));
+                return;
+            }
+        }
+
+        let output_path = sanitize_output_path(&self.output_archive_path);
+        self.status_display.set_content(String::from("Pakowanie..."));
+
+        let compression_method = self.compression_method;
+
+        spawn_thread!(self, status_display,
+        {
+            match pack_and_compress(input_paths, output_path, compression_method)
+            {
+                Ok(_) => "Spakowano.".to_string(),
+                Err(err_msg) => err_msg,
+            }
+        });
+    }
+
+    fn packing_vertical(&mut self, ui: &mut Ui) -> InnerResponse<()>
+    {
+        ui.vertical(|ui|
+        {
+            ui.label("Pakowanie:");
+            ui.horizontal(|ui|
+            {
+                if ui.button("Dodaj pliki do spakowania").clicked()
+                {
+                    self.select_files_to_pack();
+                }
+
+                if ui.button("Dodaj foldery do spakowania").clicked()
+                {
+                    self.select_folders_to_pack();
+                }
+            });
+
+            ui.label("Ścieżki do spakowania:");
+
+            egui::ScrollArea::vertical()
+                .min_scrolled_height(300.0)
+                .max_height(600.0)
+                .show(ui, |ui| self.show_paths_to_pack(ui));
+
+            if ui.button("Wyczyść").clicked()
+            {
+                self.paths_to_pack.clear();
+            }
+
+            ui.horizontal(|ui|
+            {
+                ui.add(egui::TextEdit::singleline(&mut self.output_archive_path)
+                    .hint_text("Ścieżka do wynikowego archiwum..."));
+
+                if ui.button("Wybierz lokalizację archiwum").clicked()
+                {
+                    self.select_output_archive_path();
+                }
+
+                if ui.button("Spakuj").clicked()
+                {
+                    self.do_packing();
+                }
+
+                ui.vertical(|ui|
+                {
+                    ui.label("Wybierz metodę kompresji:");
+                    ui.horizontal(|ui|
+                    {
+                        ui.radio_value(&mut self.compression_method, HUFFMAN, "Huffman");
+                        ui.radio_value(&mut self.compression_method, LZ77, "LZ77");
+                    });
+                });
+            });
+        })
+    }
+}
+
+impl Gui // extraction
+{
     fn select_input_archive_path(&mut self)
     {
-        if let Some(path) = FileDialog::new()
+        let chosen_path = FileDialog::new()
             .add_filter("Archiwa xca", &[ARCHIVE_EXTENSION])
             .add_filter("Wszystkie pliki", &["*"])
-            .pick_file()
+            .pick_file();
+
+        if let Some(path) = chosen_path
         {
             let path = path.to_str().unwrap().to_string();
             let path = sanitize_path(&path);
 
             self.input_archive_path = path.clone();
-            display_archive!(self, &path);
+            self.show_archive_content();
         }
     }
 
@@ -122,6 +245,176 @@ impl Gui
         {
             self.output_directory = path.to_str().unwrap().to_string();
         }
+    }
+
+    fn show_packed_files_selection(&mut self, ui: &mut Ui) -> InnerResponse<()>
+    {
+        ui.vertical(|ui|
+        {
+            for path in self.archive_content.get_content().iter()
+            {
+                let is_selected = self.selected_archive_items.contains(path);
+                let display_path = self.display_path_map.get(path).unwrap();
+
+                let response = ui.selectable_label(is_selected, display_path);
+
+                if response.clicked()
+                {
+                    if is_selected
+                    {
+                        // Unclick
+                        self.selected_archive_items.remove(path);
+                    }
+                    else
+                    {
+                        // Click
+                        self.selected_archive_items.insert(path.clone());
+                    }
+                }
+            }
+        })
+    }
+
+    fn show_archive_content(&mut self)
+    {
+        if self.processing
+        {
+            return;
+        }
+
+        self.processing = true;
+        let input_path = sanitize_path(&self.input_archive_path);
+        let result = Arc::clone(&self.archive_content.result);
+
+        thread::spawn(move ||
+        {
+            let content = match Extractor::new(input_path)
+            {
+                Ok(extractor) => extractor.to_string(),
+                Err(err) => err.to_string(),
+            };
+
+            let paths: Vec<String> = content
+                .lines()
+                .map(|line| line.to_string())
+                .collect();
+
+            let mut result_lock = result.lock().unwrap();
+            *result_lock = Some(paths)
+        });
+
+        self.processing = false;
+    }
+
+    fn do_extraction(&mut self)
+    {
+        if self.processing
+        {
+            return;
+        }
+
+        let input_path = sanitize_path(&self.input_archive_path);
+        let output_directory = sanitize_path(&self.output_directory);
+
+        // Get chosen_paths from clicked position of the selection menu
+        // and remove everything after the actual path,
+        // e.g., "Some", "None" and all that shit.
+        let chosen_paths: Vec<String> = self.selected_archive_items.clone()
+            .into_iter()
+            .map(|s| s.clone().split_once(' ').map_or(s, |(before, _)| before.to_string()))
+            .collect();
+
+        if chosen_paths.is_empty()
+        {
+            self.status_display
+                .set_content(String::from("Wybierz pliki do wypakowania."));
+            return;
+        }
+
+        if input_path.is_empty()
+        {
+            self.status_display
+                .set_content(String::from("Podaj ścieżkę archiwum."));
+            return;
+        }
+
+        if output_directory.is_empty()
+        {
+            self.status_display
+                .set_content(String::from("Podaj ścieżkę do wypakowania."));
+            return;
+        }
+
+        self.processing = true;
+        self.status_display.set_content(String::from("Wypakowywanie..."));
+
+
+        spawn_thread!(self, status_display,
+        {
+            match Extractor::new(input_path)
+            {
+                Ok(mut extractor) =>
+                {
+                    match extractor.extract_paths(chosen_paths, output_directory)
+                    {
+                        Ok(_) => "Wypakowano".to_string(),
+                        Err(err) => err.to_string(),
+                    }
+                },
+                Err(err) => err.to_string(),
+            }
+        });
+    }
+
+    fn extraction_vertical(&mut self, ui: &mut Ui) -> InnerResponse<()>
+    {
+        ui.vertical(|ui|
+        {
+            ui.label("Wypakowywanie");
+            ui.horizontal(|ui|
+            {
+                if ui.button("Wybierz archiwum").clicked()
+                {
+                    self.select_input_archive_path();
+                }
+            });
+
+            ui.horizontal(|ui|
+            {
+                ui.add(egui::TextEdit::singleline(&mut self.input_archive_path)
+                    .hint_text("Ścieżka do archiwum"));
+
+                if ui.button("Pokaż").clicked()
+                {
+                    self.show_archive_content();
+                }
+            });
+
+            ui.vertical(|ui|
+            {
+                ui.label("Zawartość archiwum:");
+                egui::ScrollArea::vertical()
+                    .min_scrolled_height(300.0)
+                    .max_height(600.0)
+                    .show(ui, |ui| self.show_packed_files_selection(ui));
+            });
+
+            ui.horizontal(|ui|
+            {
+                ui.add(egui::TextEdit::singleline(&mut self.output_directory)
+                    .hint_text("Wypakuj do..."));
+
+                if ui.button("Wybierz folder do wypakowania").clicked()
+                {
+                    self.select_output_directory();
+                }
+
+                if ui.button("Wypakuj").clicked()
+                {
+                    self.do_extraction();
+                }
+            });
+        })
     }
 }
 
@@ -140,242 +433,8 @@ impl eframe::App for Gui
 
             ui.horizontal(|ui|
             {
-                // Extraction vertical
-                ui.vertical(|ui|
-                {
-                    ui.label("Wypakowywanie");
-                    ui.horizontal(|ui|
-                    {
-                        if ui.button("Wybierz archiwum").clicked()
-                        {
-                            self.select_input_archive_path();
-                        }
-                    });
-
-                    ui.horizontal(|ui|
-                    {
-                        ui.add(egui::TextEdit::singleline(&mut self.input_archive_path)
-                            .hint_text("Ścieżka do archiwum"));
-
-                        if ui.button("Pokaż").clicked()
-                        {
-                            display_archive!(self, &self.input_archive_path);
-                        }
-                    });
-
-                    ui.vertical(|ui|
-                    {
-                        ui.label("Zawartość archiwum:");
-                        egui::ScrollArea::vertical()
-                            .min_scrolled_height(300.0)
-                            .max_height(600.0)
-                            .show(ui, |ui|
-                            {
-                                ui.vertical(|ui|
-                                {
-                                    for path in self.archive_content.get_content().iter()
-                                    {
-                                        let is_selected = self.selected_archive_items.contains(path);
-                                        let display_path = self.display_path_map.get(path).unwrap();
-
-                                        let response = ui.selectable_label(is_selected, display_path);
-
-                                        if response.clicked()
-                                        {
-                                            if is_selected
-                                            {
-                                                // Unclick
-                                                self.selected_archive_items.remove(path);
-                                            } else {
-                                                // Click
-                                                self.selected_archive_items.insert(path.clone());
-                                            }
-                                        }
-                                    }
-                                })
-                            })
-                    });
-
-                    ui.horizontal(|ui|
-                    {
-                        ui.add(egui::TextEdit::singleline(&mut self.output_directory)
-                                   .hint_text("Wypakuj do..."));
-
-                        if ui.button("Wybierz folder do wypakowania").clicked()
-                        {
-                            self.select_output_directory();
-                        }
-
-                        if ui.button("Wypakuj").clicked()
-                        {
-                            if self.processing
-                            {
-                                return;
-                            }
-
-                            let input_path = sanitize_path(&self.input_archive_path);
-                            let output_directory = sanitize_path(&self.output_directory);
-
-                            // Get chosen_paths from clicked position of the selection menu
-                            // and remove everything after the actual path,
-                            // e.g., "Some", "None" and all that shit.
-                            let chosen_paths: Vec<String> = self.selected_archive_items.clone()
-                                .into_iter()
-                                .map(|s| s.clone().split_once(' ')
-                                    .map_or(s, |(before, _)| before.to_string()))
-                                .collect();
-
-                            if chosen_paths.is_empty()
-                            {
-                                self.status_display
-                                    .set_content(String::from("Wybierz pliki do wypakowania."));
-                                return;
-                            }
-
-                            if input_path.is_empty()
-                            {
-                                self.status_display
-                                    .set_content(String::from("Podaj ścieżkę archiwum."));
-                                return;
-                            }
-
-                            if output_directory.is_empty()
-                            {
-                                self.status_display
-                                    .set_content(String::from("Podaj ścieżkę do wypakowania."));
-                                return;
-                            }
-
-                            self.processing = true;
-                            self.status_display.set_content(String::from("Wypakowywanie..."));
-
-
-
-
-                            spawn_thread!(self, status_display,
-                            {
-                                match Extractor::new(input_path)
-                                {
-                                    Ok(mut extractor) =>
-                                    {
-                                        match extractor.extract_paths(chosen_paths, output_directory)
-                                        {
-                                            Ok(_) => "Wypakowano".to_string(),
-                                            Err(err) => err.to_string(),
-                                        }
-                                    }
-                                    Err(err) => err.to_string(),
-                                }
-                            });
-                        }
-                    });
-                });
-
-                // Packing vertical
-                ui.vertical(|ui|
-                {
-                    ui.label("Pakowanie:");
-                    ui.horizontal(|ui|
-                    {
-                        if ui.button("Dodaj pliki do spakowania").clicked()
-                        {
-                            self.select_files_to_pack();
-                        }
-
-                        if ui.button("Dodaj foldery do spakowania").clicked()
-                        {
-                            self.select_folders_to_pack();
-                        }
-                    });
-
-                    ui.label("Ścieżki do spakowania:");
-
-                    egui::ScrollArea::vertical()
-                        .min_scrolled_height(300.0)
-                        .max_height(600.0)
-                        .show(ui, |ui|
-                    {
-                        ui.vertical(|ui|
-                        {
-                            let mut paths_to_remove = Vec::new();
-
-                            for path in &self.paths_to_pack
-                            {
-                                let path_label = ui.selectable_label(false, path);
-                                if path_label.hovered() && ui.input(|i| i.pointer.secondary_clicked())
-                                {
-                                    paths_to_remove.push(path.clone());
-                                }
-                            }
-
-                            // Remove the paths that were right-clicked.
-                            for path_to_remove in paths_to_remove
-                            {
-                                self.paths_to_pack.retain(|path| path != &path_to_remove);
-                            }
-                        })
-                    });
-
-                    if ui.button("Wyczyść").clicked()
-                    {
-                        self.paths_to_pack.clear();
-                    }
-
-                    ui.horizontal(|ui|
-                    {
-                        ui.add(egui::TextEdit::singleline(&mut self.output_archive_path)
-                            .hint_text("Ścieżka do wynikowego archiwum..."));
-
-                        if ui.button("Wybierz lokalizację archiwum").clicked()
-                        {
-                            self.select_output_archive_path();
-                        }
-
-                        if ui.button("Spakuj").clicked()
-                        {
-                            if self.processing
-                            {
-                                return;
-                            }
-
-                            let input_paths = self.paths_to_pack.clone();
-
-                            for path in &input_paths
-                            {
-                                if !Path::new(path).exists()
-                                {
-                                    self.status_display.set_content(format!("Plik {} nie istnieje.", path));
-                                    return;
-                                }
-                            }
-
-                            let output_path = sanitize_output_path(&self.output_archive_path);
-                            self.status_display.set_content(String::from("Pakowanie..."));
-
-
-                            let compression_method = self.compression_method;
-
-                            spawn_thread!(self, status_display,
-                            {
-                                match pack_and_compress(input_paths, output_path, compression_method)
-                                {
-                                    Ok(_) => "Spakowano.".to_string(),
-                                    Err(err_msg) => err_msg,
-                                }
-                            });
-                        }
-
-                        ui.vertical(|ui|
-                        {
-                            ui.label("Wybierz metodę kompresji:");
-                            ui.horizontal(|ui|
-                            {
-                                ui.radio_value(&mut self.compression_method, HUFFMAN, "Huffman");
-                                ui.radio_value(&mut self.compression_method, LZ77, "LZ77");
-                            });
-                        });
-                    });
-                });
+                self.packing_vertical(ui);
+                self.extraction_vertical(ui);
             });
 
             ui.horizontal(|ui|
@@ -400,7 +459,7 @@ pub fn run(window_name: &str, archive_argument: Option<String>) -> eframe::Resul
     if let Some(path) = archive_argument
     {
         gui.input_archive_path = path.clone();
-        display_archive!(gui, &path);
+        gui.show_archive_content();
     }
 
     eframe::run_native
