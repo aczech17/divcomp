@@ -1,5 +1,6 @@
-use crate::compress::lz77::{LONG_BUFFER_SIZE, SHORT_BUFFER_SIZE};
 use crate::io_utils::universal_reader::UniversalReader;
+use crate::compress::lz77::{LONG_BUFFER_SIZE, SHORT_BUFFER_SIZE};
+
 
 pub struct CompressionWindow
 {

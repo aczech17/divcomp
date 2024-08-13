@@ -1,15 +1,15 @@
+use std::fs::File;
+use crate::io_utils::byte_writer::ByteWriter;
+use crate::io_utils::LZ77_SIGNATURE;
+use crate::io_utils::universal_reader::UniversalReader;
+
 mod compression_window;
 mod decompression_buffer;
 
 use crate::compress::lz77::compression_window::CompressionWindow;
-use crate::compress::{Compress, DecompressionError};
-
-use std::fs::File;
-use crate::compress::Decompress;
 use crate::compress::lz77::decompression_buffer::DecompressionBuffer;
-use crate::io_utils::byte_writer::ByteWriter;
-use crate::io_utils::LZ77_SIGNATURE;
-use crate::io_utils::universal_reader::UniversalReader;
+use crate::compress::{Compress, Decompress, DecompressionError};
+
 
 const LONG_BUFFER_SIZE: usize = 1 << 16;
 const SHORT_BUFFER_SIZE: usize = 258;

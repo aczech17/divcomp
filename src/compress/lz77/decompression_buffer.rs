@@ -1,9 +1,9 @@
-use crate::compress::DecompressionError;
-use crate::io_utils::{create_tmp_file, FileInfo};
 use std::fs;
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::ops::Range;
+use crate::io_utils::{create_tmp_file, FileInfo};
+use crate::compress::DecompressionError;
 
 
 #[cfg(debug_assertions)]

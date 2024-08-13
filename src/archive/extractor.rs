@@ -1,17 +1,20 @@
 use std::fmt::{Display, Formatter};
-use std::fs::{create_dir, create_dir_all, File};
+use std::fs::{File, create_dir, create_dir_all};
 use std::io::Read;
 use std::path::Path;
 
-use crate::archive::directory_info::DirectoryInfo;
-use crate::compress::huffman::HuffmanDecompressor;
-use crate::compress::Decompress;
-use crate::compress::DecompressionError;
 use crate::io_utils::byte_buffer::ByteBuffer;
 use crate::io_utils::path_utils::{get_superpath, is_a_subdirectory};
-use crate::io_utils::{bytes_to_u64, HUFFMAN_SIGNATURE, LZ77_SIGNATURE};
+use crate::io_utils::{HUFFMAN_SIGNATURE, LZ77_SIGNATURE, bytes_to_u64};
 
+use crate::archive::directory_info::DirectoryInfo;
+
+use crate::compress::Decompress;
+use crate::compress::DecompressionError;
+
+use crate::compress::huffman::HuffmanDecompressor;
 use crate::compress::lz77::LZ77Decompressor;
+
 
 pub struct Extractor
 {

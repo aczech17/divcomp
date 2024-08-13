@@ -1,15 +1,17 @@
 use std::collections::HashMap;
 use std::fs::File;
 
+use crate::io_utils::bit_vector::BitVector;
+use crate::io_utils::bit_vector_writer::BitVectorWriter;
+use crate::io_utils::HUFFMAN_SIGNATURE;
+use crate::io_utils::universal_reader::UniversalReader;
+
 use crate::compress::byte_writer::ByteWriter;
 use crate::compress::Compress;
 use crate::compress::Decompress;
 use crate::compress::DecompressionError;
 use crate::compress::huffman::tree::HuffmanTree;
-use crate::io_utils::bit_vector::BitVector;
-use crate::io_utils::bit_vector_writer::BitVectorWriter;
-use crate::io_utils::HUFFMAN_SIGNATURE;
-use crate::io_utils::universal_reader::UniversalReader;
+
 
 mod tree;
 

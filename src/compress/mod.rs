@@ -1,15 +1,16 @@
-use std::fmt::Display;
-use crate::io_utils::FileInfo;
-use crate::archive::pack::pack;
-use crate::compress::lz77::LZ77Compressor;
-use crate::io_utils::byte_writer;
 use std::fs;
 use std::path::Path;
+use std::fmt::Display;
+use crate::io_utils::{FileInfo, create_tmp_file, byte_writer};
 
-pub mod lz77;
+use crate::archive::pack::pack;
+
 pub mod huffman;
+pub mod lz77;
+
 use crate::compress::huffman::HuffmanCompressor;
-use crate::io_utils::create_tmp_file;
+use crate::compress::lz77::LZ77Compressor;
+
 
 #[allow(clippy::upper_case_acronyms)] // Clippy thinks HUFFMAN is an acronym.
 #[derive(Clone, Copy, PartialEq)]
