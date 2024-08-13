@@ -410,6 +410,8 @@ impl Gui // extraction
                 Err(err) => err.to_string(),
             }
         });
+
+        self.selected_archive_items.clear();
     }
 
     fn extraction_vertical(&mut self, ui: &mut Ui) -> InnerResponse<()>
