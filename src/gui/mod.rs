@@ -1,20 +1,21 @@
 mod util;
-use crate::gui::egui::Ui;
-use crate::gui::util::MultithreadedData;
-use crate::{spawn_thread};
-
-use crate::archive::extractor::Extractor;
-use crate::compress::CompressionMethod::{HUFFMAN, LZ77};
-use crate::compress::{pack_and_compress, CompressionMethod};
-use crate::io_utils::path_utils::ARCHIVE_EXTENSION;
-use crate::io_utils::path_utils::{get_display_paths, sanitize_output_path, sanitize_path};
-use eframe::egui;
-use rfd::FileDialog;
+use util::MultithreadedData;
 use std::collections::{HashMap, HashSet};
-use std::path::Path;
-use std::thread;
-use std::sync::Arc;
-use eframe::egui::InnerResponse;
+use std::{path::Path, thread, sync::Arc};
+use crate::io_utils::path_utils::
+    {ARCHIVE_EXTENSION, get_display_paths, sanitize_path, sanitize_output_path};
+use crate::archive::extractor::Extractor;
+use crate::compress::
+{
+    CompressionMethod,
+    CompressionMethod::{HUFFMAN, LZ77},
+    pack_and_compress,
+};
+use eframe::egui;
+use egui::Ui;
+use egui::InnerResponse;
+use rfd::FileDialog;
+
 
 pub struct Gui
 {
@@ -52,6 +53,25 @@ impl Default for Gui
             status_display: MultithreadedData::new(String::new()),
             processing: false,
         }
+    }
+}
+
+impl Gui
+{
+    fn spawn_task(&mut self, task: impl FnOnce() -> String + Send + 'static)
+    {
+        self.processing = true;
+
+        let exec_result = Arc::clone(&self.status_display.result);
+
+        thread::spawn(move ||
+        {
+            let result = task();
+
+            let mut exec_result_lock = exec_result.lock().unwrap();
+            *exec_result_lock = Some(result);
+        });
+        self.processing = false;
     }
 }
 
@@ -151,7 +171,7 @@ impl Gui // packing
 
         let compression_method = self.compression_method;
 
-        spawn_thread!(self, status_display,
+        self.spawn_task(move ||
         {
             match pack_and_compress(input_paths, output_path, compression_method)
             {
@@ -348,8 +368,7 @@ impl Gui // extraction
         self.processing = true;
         self.status_display.set_content(String::from("Wypakowywanie..."));
 
-
-        spawn_thread!(self, status_display,
+        self.spawn_task(||
         {
             match Extractor::new(input_path)
             {

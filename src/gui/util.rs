@@ -39,24 +39,3 @@ impl<T> MultithreadedData<T>
     }
 }
 
-#[macro_export]
-macro_rules! spawn_thread
-{
-    ($self: ident, $result_variable: ident, $code: block) =>
-    {
-        use std::sync::Arc;
-
-        $self.processing = true;
-
-        let exec_result = Arc::clone(&$self.$result_variable.result);
-
-        thread::spawn(move ||
-        {
-            let result = $code;
-
-            let mut exec_result_lock = exec_result.lock().unwrap();
-            *exec_result_lock = Some(result);
-        });
-        $self.processing = false;
-    };
-}
