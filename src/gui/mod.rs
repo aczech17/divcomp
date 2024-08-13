@@ -341,8 +341,13 @@ impl Gui // extraction
         // e.g., "Some", "None" and all that shit.
         let chosen_paths: Vec<String> = self.selected_archive_items.clone()
             .into_iter()
-            .map(|s| s.clone().split_once(' ').map_or(s, |(before, _)| before.to_string()))
+            .map(|path|
+            {
+                let index_to_split = path.rfind(' ').unwrap_or(path.len());
+                path[..index_to_split].to_string()
+            })
             .collect();
+
 
         if chosen_paths.is_empty()
         {
