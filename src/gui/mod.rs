@@ -2,8 +2,7 @@ mod util;
 use util::MultithreadedData;
 use std::collections::{HashMap, HashSet};
 use std::{path::Path, thread, sync::Arc};
-use crate::io_utils::path_utils::
-    {ARCHIVE_EXTENSION, get_display_paths, sanitize_path, sanitize_output_path};
+use crate::io_utils::path_utils::{ARCHIVE_EXTENSION, get_display_paths, sanitize_path, sanitize_output_path, is_a_subdirectory};
 use crate::archive::extractor::Extractor;
 use crate::compress::
 {
@@ -83,15 +82,26 @@ impl Gui // packing
             .set_title("Wybierz pliki")
             .pick_files()
         {
-            let paths_to_pack: Vec<String> = paths.into_iter()
+            let input_paths: Vec<String> = paths.into_iter()
                 .map(|path| path.to_str().unwrap_or("").to_string())
                 .collect();
 
-            self.paths_to_pack.extend(paths_to_pack);
+            let mut new_paths = vec![];
+            for input_path in input_paths
+            {
+                // If we already have this path
+                // or some path we already have is a superdirectory of this path,
+                // then we skip this path.
+                if self.paths_to_pack.iter()
+                    .find(|&path|
+                        *path == input_path || is_a_subdirectory(path, &input_path))
+                    .is_none()
+                {
+                    new_paths.push(input_path);
+                }
+            }
 
-            // Now remove the duplicates.
-            let unique_paths: HashSet<String> = self.paths_to_pack.iter().cloned().collect();
-            self.paths_to_pack = unique_paths.into_iter().collect();
+            self.paths_to_pack.extend(new_paths);
         }
     }
 
@@ -101,15 +111,27 @@ impl Gui // packing
             .set_title("Wybierz foldery")
             .pick_folders()
         {
-            let paths_to_pack: Vec<String> = paths.into_iter()
+            let input_paths: Vec<String> = paths.into_iter()
                 .map(|path| path.to_str().unwrap_or("").to_string())
                 .collect();
 
-            self.paths_to_pack.extend(paths_to_pack);
+            let mut paths_to_filter_out = vec![];
+            for input_path in &input_paths
+            {
+                // If some path we already have is equal to this input path
+                // or is a subdirectory of this input path,
+                // then remove this path.
+                if let Some(path_to_filter_out) =
+                    self.paths_to_pack.iter().find(|&path|
+                        *path == *input_path || is_a_subdirectory(&input_path, path))
+                {
+                    paths_to_filter_out.push(path_to_filter_out.clone());
+                }
+            }
+            self.paths_to_pack.retain(|path| !paths_to_filter_out.contains(path));
 
-            // Now remove the duplicates.
-            let unique_paths: HashSet<String> = self.paths_to_pack.iter().cloned().collect();
-            self.paths_to_pack = unique_paths.into_iter().collect();
+            // We cleaned the old paths. Let's add the new paths to the old paths.
+            self.paths_to_pack.extend(input_paths);
         }
     }
 
