@@ -6,11 +6,14 @@ use crate::io_utils::{create_tmp_file, FileInfo};
 use crate::compress::DecompressionError;
 
 
-#[cfg(debug_assertions)]
-const BUFFER_SIZE: usize = 1;
-
-#[cfg(not(debug_assertions))]
-const BUFFER_SIZE: usize = 1 << 27;
+const BUFFER_SIZE: usize = if cfg!(debug_assertions)
+{
+    1
+}
+else
+{
+    1 << 27
+};
 
 
 pub struct DecompressionBuffer
