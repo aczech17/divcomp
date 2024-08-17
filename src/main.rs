@@ -3,15 +3,13 @@
 mod io_utils;
 mod archive;
 mod compress;
-use std::env;
 mod gui;
-use gui::run;
 
 fn main()
 {
-    let archive_path = env::args().nth(1);
+    let archive_path = std::env::args().nth(1);
 
-    if let Err(err) = run("Archiwizator boży", archive_path)
+    if let Err(err) = gui::run("Archiwizator boży", archive_path)
     {
         eprintln!("{}", err);
     }

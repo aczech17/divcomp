@@ -82,7 +82,7 @@ impl LZ77Decompressor
     pub fn new(input_file: File) -> Result<Self, DecompressionError>
     {
         let mut input = UniversalReader::new(input_file);
-        let mut decompression_buffer = DecompressionBuffer::new()?;
+        let mut decompression_buffer = DecompressionBuffer::new();
 
         while let Some(offset) = Self::load_u16(&mut input)
         {

@@ -22,16 +22,14 @@ pub struct DecompressionBuffer
 
 impl DecompressionBuffer
 {
-    pub fn new() -> Result<DecompressionBuffer, DecompressionError>
+    pub fn new() -> DecompressionBuffer
     {
-        let buffer = DecompressionBuffer
+        DecompressionBuffer
         {
             memory: Vec::with_capacity(BUFFER_SIZE),
             reserve_file: None,
             buffer_size_total: 0,
-        };
-
-        Ok(buffer)
+        }
     }
 
     /// Given couple (offset, length), it decompresses some bytes and returns

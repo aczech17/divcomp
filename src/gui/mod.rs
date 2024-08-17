@@ -92,10 +92,8 @@ impl Gui // packing
                 // If we already have this path
                 // or some path we already have is a superdirectory of this path,
                 // then we skip this path.
-                if self.paths_to_pack.iter()
-                    .find(|&path|
-                        *path == input_path || is_a_subdirectory(path, &input_path))
-                    .is_none()
+                if !self.paths_to_pack.iter()
+                    .any(|path| *path == input_path || is_a_subdirectory(path, &input_path))
                 {
                     new_paths.push(input_path);
                 }
@@ -123,7 +121,7 @@ impl Gui // packing
                 // then remove this path.
                 if let Some(path_to_filter_out) =
                     self.paths_to_pack.iter().find(|&path|
-                        *path == *input_path || is_a_subdirectory(&input_path, path))
+                        *path == *input_path || is_a_subdirectory(input_path, path))
                 {
                     paths_to_filter_out.push(path_to_filter_out.clone());
                 }
@@ -493,7 +491,8 @@ impl eframe::App for Gui
     }
 }
 
-
+/// It starts the program window with a window name
+/// and an optional path to an archive to open when starting the program.
 pub fn run(window_name: &str, archive_argument: Option<String>) -> eframe::Result
 {
     env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
@@ -510,7 +509,7 @@ pub fn run(window_name: &str, archive_argument: Option<String>) -> eframe::Resul
     let mut gui = Gui::default();
     if let Some(path) = archive_argument
     {
-        gui.input_archive_path = path.clone();
+        gui.input_archive_path = path;
         gui.show_archive_content();
     }
 
