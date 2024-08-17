@@ -1,12 +1,12 @@
 [package]
 name = "divcomp"
-version = "0.78.0"
+version = "0.78.10"
 edition = "2021"
 
 [dependencies]
 walkdir = "2.5.0"
-serde_json = "=1.0.124"
-serde = { version = "1.0.207", features = ["derive"] }
+serde_json = "=1.0.125"
+serde = { version = "1.0.208", features = ["derive"] }
 rand = "0.9.0-alpha.2"
 sysinfo = "0.31.2"
 eframe = "0.28.1"
